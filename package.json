@@ -1,0 +1,43 @@
+{
+  "name": "hplcontracts",
+  "version": "1.0.0",
+  "description": "HPL Smart Contracts",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "hardhat test --network local",
+    "compile": "hardhat compile",
+    "deploy kovan" : "npx hardhat deploy --network kovan"
+  },
+  "keywords": [
+    "hardhat",
+    "ethereum",
+    "hackathon"
+  ],
+  "devDependencies": {
+    "@nomiclabs/buidler": "^1.4.8",
+    "@nomiclabs/hardhat-ethers": "^2.0.0",
+    "@nomiclabs/hardhat-etherscan": "^2.1.7",
+    "@nomiclabs/hardhat-waffle": "^2.0.0",
+    "chai": "^4.2.0",
+    "ethereum-waffle": "^3.1.1",
+    "ethers": "^5.0.0",
+    "hardhat": "^2.0.4",
+    "husky": "^4.2.5"
+  },
+  "dependencies": {
+    "@nomiclabs/hardhat-web3": "^2.0.0",
+    "@openzeppelin/contracts": "^4.2.0",
+    "@openzeppelin/contracts-upgradeable": "^4.3.2",
+    "@openzeppelin/hardhat-upgrades": "^1.10.0",
+    "dotenv": "^10.0.0",
+    "hardhat-abi-exporter": "^2.2.1",
+    "hardhat-deploy": "^0.8.11",
+    "hardhat-deploy-ethers": "*",
+    "hardhat-gas-reporter": "^1.0.4",
+    "sleep-promise": "^9.1.0",
+    "solidity-coverage": "^0.7.17",
+    "truffle-privatekey-provider": "^1.5.0"
+  }
+}
