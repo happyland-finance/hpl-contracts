@@ -192,6 +192,34 @@
   },
   {
     "inputs": [],
+    "name": "currentSale",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "startTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "endTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "wareHouseCountForSale",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currentWareHouseCount",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "feeTo",
     "outputs": [
       {
@@ -340,6 +368,39 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "_startTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_duration",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_landCountRarities",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_landCountForSales",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_wareHouseCountForSale",
+        "type": "uint256"
+      }
+    ],
+    "name": "setNewSale",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "bool",
         "name": "_val",
         "type": "bool"
@@ -372,6 +433,39 @@
       }
     ],
     "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_startTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_duration",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_landCountRarities",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_landCountForSales",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_wareHouseCountForSale",
+        "type": "uint256"
+      }
+    ],
+    "name": "updateCurrentSale",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
