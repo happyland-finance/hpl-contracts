@@ -5,9 +5,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "../interfaces/ILand.sol";
+import "../interfaces/IWareHouse.sol";
 import "../lib/BlackholePreventionOwnable.sol";
-contract Land is ERC721Enumerable, ILand, BlackholePreventionOwnable, Initializable {
+
+contract WareHouse is ERC721Enumerable, IWareHouse, BlackholePreventionOwnable, Initializable {
     using SafeMath for uint256;
     using Strings for uint256;
 
@@ -17,9 +18,9 @@ contract Land is ERC721Enumerable, ILand, BlackholePreventionOwnable, Initializa
     mapping(uint256 => string) public tokenURIs;
 
     mapping(address => uint256) public latestTokenMinted;
-    mapping(uint256 => uint256) public tokenRarityMapping;
     address public factory;
-    constructor() ERC721("HappyLand Land NFT", "HLandNFT") {}
+
+    constructor() ERC721("HappyLand WareHouse NFT", "HWHNFT") {}
 
     function initialize(address _nftFactory) external initializer {
         factory = _nftFactory;
@@ -29,8 +30,14 @@ contract Land is ERC721Enumerable, ILand, BlackholePreventionOwnable, Initializa
         baseURI = _b;
     }
 
-    function setTokenURI(uint256 tokenId, string memory _tokenURI) external onlyOwner {
-        require(_exists(tokenId), "ERC721Metadata: URI set of nonexistent token");
+    function setTokenURI(uint256 tokenId, string memory _tokenURI)
+        external
+        onlyOwner
+    {
+        require(
+            _exists(tokenId),
+            "ERC721Metadata: URI set of nonexistent token"
+        );
         tokenURIs[tokenId] = _tokenURI;
     }
 
@@ -38,8 +45,17 @@ contract Land is ERC721Enumerable, ILand, BlackholePreventionOwnable, Initializa
         return baseURI;
     }
 
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        virtual
+        override
+        returns (string memory)
+    {
+        require(
+            _exists(tokenId),
+            "ERC721Metadata: URI query for nonexistent token"
+        );
 
         string memory _tokenURI = tokenURIs[tokenId];
         string memory base = _baseURI();
@@ -66,16 +82,16 @@ contract Land is ERC721Enumerable, ILand, BlackholePreventionOwnable, Initializa
     }
 
     //client compute result index off-chain, the function will verify it
-    function mint(
-        address _recipient,
-        uint256 _rarity
-    ) external override onlyFactory returns (uint256 _tokenId) {
+    function mint(address _recipient)
+        external
+        override
+        onlyFactory
+        returns (uint256 _tokenId)
+    {
         currentId = currentId.add(1);
         uint256 tokenId = currentId;
-        require(tokenRarityMapping[tokenId] == 0, "Token already exists");
 
         _mint(_recipient, tokenId);
-        tokenRarityMapping[tokenId] = _rarity;
         latestTokenMinted[_recipient] = tokenId;
         return tokenId;
     }

@@ -337,11 +337,6 @@
         "internalType": "address",
         "name": "_recipient",
         "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_rarity",
-        "type": "uint256"
       }
     ],
     "name": "mint",
@@ -585,25 +580,6 @@
       }
     ],
     "name": "tokenOfOwnerByIndex",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "tokenRarityMapping",
     "outputs": [
       {
         "internalType": "uint256",
