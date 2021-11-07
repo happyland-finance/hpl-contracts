@@ -232,6 +232,49 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getCurrentSaleInfo",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "startTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "endTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "landCountRarities",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "landCountForSales",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "wareHouseCountForSale",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "currentLandCounts",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currentWareHouseCount",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",

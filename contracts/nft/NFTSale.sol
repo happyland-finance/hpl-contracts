@@ -194,4 +194,24 @@ contract NFTSale is BlackholePreventionOwnable, Initializable, Pausable {
             feeTo.sendValue(address(this).balance);
         }
     }
+
+    function getCurrentSaleInfo() external view returns (
+        uint256 startTime,
+        uint256 endTime,
+        uint256[] memory landCountRarities,
+        uint256[] memory landCountForSales,    
+        uint256 wareHouseCountForSale,
+        uint256[] memory currentLandCounts,
+        uint256 currentWareHouseCount
+    ) {
+        return (
+            currentSale.startTime,
+            currentSale.endTime,
+            currentSale.landCountRarities,
+            currentSale.landCountForSales,
+            currentSale.wareHouseCountForSale,
+            currentSale.currentLandCounts,
+            currentSale.currentWareHouseCount
+        );
+    }
 }
