@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "../interfaces/IWareHouse.sol";
 import "../interfaces/ILand.sol";
 import "../lib/BlackholePreventionOwnable.sol";
-contract NFTCreator is BlackholePreventionOwnable, Initializable, Pausable {
+contract NFTSale is BlackholePreventionOwnable, Initializable, Pausable {
     using Address for address payable;
 
     ILand public land;
