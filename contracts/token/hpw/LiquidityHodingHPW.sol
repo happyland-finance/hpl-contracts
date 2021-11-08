@@ -3,19 +3,19 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../interfaces/IPancakePair.sol";
-import "../interfaces/IPancakeRouter02.sol";
-import "../interfaces/ILiquidityHolding.sol";
-import "../lib/BlackholePrevention.sol";
+import "../../interfaces/IPancakePair.sol";
+import "../../interfaces/IPancakeRouter02.sol";
+import "../../interfaces/ILiquidityHolding.sol";
+import "../../lib/BlackholePrevention.sol";
 
-contract LiquidityHolding is
+contract LiquidityHoldingHPW is
     Ownable,
     Initializable,
     ILiquidityHolding,
     BlackholePrevention
 {
     using SafeERC20 for IERC20;
-    IERC20 public hpl;
+    IERC20 public hpw;
     bool public swapAndLiquidifyEnabled;
     bool public inSwapAndLiquify;
     IPancakePair public liquidityPair;
@@ -23,12 +23,12 @@ contract LiquidityHolding is
     mapping(address => bool) public liquidityCallers;
     uint256 public minimumToAddLiquidity;
 
-    function initialize(address _hpl, address _pancakeRouter)
+    function initialize(address _hpw, address _pancakeRouter)
         external
         initializer
     {
-        hpl = IERC20(_hpl);
-        liquidityCallers[_hpl] = true;
+        hpw = IERC20(_hpw);
+        liquidityCallers[_hpw] = true;
         minimumToAddLiquidity = 200e18;
 
         swapAndLiquidifyEnabled = true;
@@ -36,9 +36,9 @@ contract LiquidityHolding is
         pancakeRouter = IPancakeRouter02(_pancakeRouter);
     }
 
-    function setHPL(address _hpl) external onlyOwner {
-        hpl = IERC20(_hpl);
-        liquidityCallers[_hpl] = true;
+    function setHPW(address _hpw) external onlyOwner {
+        hpw = IERC20(_hpw);
+        liquidityCallers[_hpw] = true;
     }
 
     function addLiquidity() external override {
@@ -48,7 +48,7 @@ contract LiquidityHolding is
             !inSwapAndLiquify &&
             address(liquidityPair) != address(0)
         ) {
-            if (hpl.balanceOf(address(this)) >= minimumToAddLiquidity) {
+            if (hpw.balanceOf(address(this)) >= minimumToAddLiquidity) {
                 swapAndLiquidify(minimumToAddLiquidity);
             }
         }
@@ -76,9 +76,9 @@ contract LiquidityHolding is
         liquidityPair = IPancakePair(_liquidityPair);
         if (_liquidityPair != address(0)) {
             require(
-                liquidityPair.token0() == address(hpl) ||    // huong
-                    liquidityPair.token1() == address(hpl),   // huong
-                "One of paired tokens must be HPL"
+                liquidityPair.token0() == address(hpw) ||    // huong
+                    liquidityPair.token1() == address(hpw),   // huong
+                "One of paired tokens must be HPW"
             );
         }
     }
@@ -104,12 +104,12 @@ contract LiquidityHolding is
     function swapTokensForToken(uint256 tokenAmount) private {
         // generate the pancake pair path of token -> weth
         address[] memory path = new address[](2);
-        path[0] = address(hpl);    //
-        path[1] = liquidityPair.token0() == address(hpl)   // huong
+        path[0] = address(hpw);    //
+        path[1] = liquidityPair.token0() == address(hpw)   // huong
             ? liquidityPair.token1()
             : liquidityPair.token0();
 
-        IERC20(hpl).approve(address(pancakeRouter), tokenAmount);
+        IERC20(hpw).approve(address(pancakeRouter), tokenAmount);
 
         // make the swap
         pancakeRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(
@@ -122,7 +122,7 @@ contract LiquidityHolding is
     }
 
     function addLiquidityInternal(uint256 tokenAmount) private {
-        address otherToken = liquidityPair.token0() == address(hpl) // huong 
+        address otherToken = liquidityPair.token0() == address(hpw) // huong 
             ? liquidityPair.token1()
             : liquidityPair.token0();
         uint256 otherTokenAmount = IERC20(otherToken).balanceOf(address(this));
@@ -131,11 +131,11 @@ contract LiquidityHolding is
             otherTokenAmount
         );
         // approve token transfer to cover all possible scenarios
-        IERC20(hpl).approve(address(pancakeRouter), tokenAmount);
+        IERC20(hpw).approve(address(pancakeRouter), tokenAmount);
 
         // add the liquidity
         pancakeRouter.addLiquidity(
-            address(hpl),   //huong
+            address(hpw),   //huong
             otherToken,
             tokenAmount,
             otherTokenAmount,

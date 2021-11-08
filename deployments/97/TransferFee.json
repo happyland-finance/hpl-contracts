@@ -1,0 +1,249 @@
+{
+	"abi": [
+		{
+			"inputs": [],
+			"stateMutability": "nonpayable",
+			"type": "constructor"
+		},
+		{
+			"anonymous": false,
+			"inputs": [
+				{
+					"indexed": true,
+					"internalType": "address",
+					"name": "previousOwner",
+					"type": "address"
+				},
+				{
+					"indexed": true,
+					"internalType": "address",
+					"name": "newOwner",
+					"type": "address"
+				}
+			],
+			"name": "OwnershipTransferred",
+			"type": "event"
+		},
+		{
+			"anonymous": false,
+			"inputs": [
+				{
+					"indexed": false,
+					"internalType": "address",
+					"name": "_addr",
+					"type": "address"
+				},
+				{
+					"indexed": false,
+					"internalType": "bool",
+					"name": "val",
+					"type": "bool"
+				}
+			],
+			"name": "ZeroFeeList",
+			"type": "event"
+		},
+		{
+			"inputs": [],
+			"name": "burnFee",
+			"outputs": [
+				{
+					"internalType": "uint256",
+					"name": "",
+					"type": "uint256"
+				}
+			],
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "address",
+					"name": "sender",
+					"type": "address"
+				},
+				{
+					"internalType": "address",
+					"name": "recipient",
+					"type": "address"
+				},
+				{
+					"internalType": "uint256",
+					"name": "amount",
+					"type": "uint256"
+				}
+			],
+			"name": "getTransferFees",
+			"outputs": [
+				{
+					"internalType": "uint256",
+					"name": "_stakeRewardFee",
+					"type": "uint256"
+				},
+				{
+					"internalType": "uint256",
+					"name": "_liquidityFee",
+					"type": "uint256"
+				},
+				{
+					"internalType": "uint256",
+					"name": "_burnFee",
+					"type": "uint256"
+				}
+			],
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"inputs": [],
+			"name": "liquidityFee",
+			"outputs": [
+				{
+					"internalType": "uint256",
+					"name": "",
+					"type": "uint256"
+				}
+			],
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"inputs": [],
+			"name": "owner",
+			"outputs": [
+				{
+					"internalType": "address",
+					"name": "",
+					"type": "address"
+				}
+			],
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"inputs": [],
+			"name": "renounceOwnership",
+			"outputs": [],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "uint256",
+					"name": "_stakeRewardFee",
+					"type": "uint256"
+				},
+				{
+					"internalType": "uint256",
+					"name": "_liquidityFee",
+					"type": "uint256"
+				},
+				{
+					"internalType": "uint256",
+					"name": "_burnFee",
+					"type": "uint256"
+				}
+			],
+			"name": "setTransferFees",
+			"outputs": [],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "address[]",
+					"name": "_addrs",
+					"type": "address[]"
+				},
+				{
+					"internalType": "bool",
+					"name": "_val",
+					"type": "bool"
+				}
+			],
+			"name": "setZeroFeeList",
+			"outputs": [],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"inputs": [],
+			"name": "stakeRewardFee",
+			"outputs": [
+				{
+					"internalType": "uint256",
+					"name": "",
+					"type": "uint256"
+				}
+			],
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "address",
+					"name": "newOwner",
+					"type": "address"
+				}
+			],
+			"name": "transferOwnership",
+			"outputs": [],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "address",
+					"name": "",
+					"type": "address"
+				}
+			],
+			"name": "zeroFeeList",
+			"outputs": [
+				{
+					"internalType": "bool",
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"stateMutability": "view",
+			"type": "function"
+		}
+	],
+	"address": "0xb877cb192a352dfeC16575529FB13f4843927bb8",
+	"deployTransaction": {
+		"hash": "0x94f17cab2cc3bce6637979d39d7b7981374e68c1f06f4a6b6a4f4d2225798fbe",
+		"type": 0,
+		"accessList": null,
+		"blockHash": null,
+		"blockNumber": null,
+		"transactionIndex": null,
+		"confirmations": 0,
+		"from": "0x4Dcfc32c29dA93fCa65A7f6Eb57b5253217846CF",
+		"gasPrice": {
+			"type": "BigNumber",
+			"hex": "0x02540be400"
+		},
+		"gasLimit": {
+			"type": "BigNumber",
+			"hex": "0x08196d"
+		},
+		"to": null,
+		"value": {
+			"type": "BigNumber",
+			"hex": "0x00"
+		},
+		"nonce": 107,
+		"data": "0x608060405234801561001057600080fd5b5061001a3361004b565b336000908152600160208190526040909120805460ff1916909117905560326002819055600381905560045561009b565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b6106bb806100aa6000396000f3fe608060405234801561001057600080fd5b506004361061009e5760003560e01c8063b0ae403011610066578063b0ae403014610100578063bfd201f514610133578063f2fde38b14610146578063fce589d814610159578063fd85fcb5146101625761009e565b8063223042e2146100a357806322af6555146100bf578063715018a6146100d45780638da5cb5b146100dc57806398118cb4146100f7575b600080fd5b6100ac60025481565b6040519081526020015b60405180910390f35b6100d26100cd366004610510565b610190565b005b6100d26102c0565b6000546040516001600160a01b0390911681526020016100b6565b6100ac60035481565b61012361010e3660046104b4565b60016020526000908152604090205460ff1681565b60405190151581526020016100b6565b6100d26101413660046105e8565b6102f6565b6100d26101543660046104b4565b61032e565b6100ac60045481565b6101756101703660046104d5565b6103c9565b604080519384526020840192909252908201526060016100b6565b6000546001600160a01b031633146101c35760405162461bcd60e51b81526004016101ba90610613565b60405180910390fd5b60005b82518110156102bb5781600160008584815181106101f457634e487b7160e01b600052603260045260246000fd5b60200260200101516001600160a01b03166001600160a01b0316815260200190815260200160002060006101000a81548160ff0219169083151502179055507fdbc6aa4e4d0e49d36c3292c44d9a35c922b138bcf6e587410e343d070b6535ed83828151811061027457634e487b7160e01b600052603260045260246000fd5b6020026020010151836040516102a19291906001600160a01b039290921682521515602082015260400190565b60405180910390a1806102b381610648565b9150506101c6565b505050565b6000546001600160a01b031633146102ea5760405162461bcd60e51b81526004016101ba90610613565b6102f46000610438565b565b6000546001600160a01b031633146103205760405162461bcd60e51b81526004016101ba90610613565b600292909255600355600455565b6000546001600160a01b031633146103585760405162461bcd60e51b81526004016101ba90610613565b6001600160a01b0381166103bd5760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b60648201526084016101ba565b6103c681610438565b50565b6001600160a01b0383166000908152600160205260408120548190819060ff168061040c57506001600160a01b03851660009081526001602052604090205460ff165b1561041f5750600091508190508061042f565b6002546003546004549250925092505b93509350939050565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b80356001600160a01b038116811461049f57600080fd5b919050565b8035801515811461049f57600080fd5b6000602082840312156104c5578081fd5b6104ce82610488565b9392505050565b6000806000606084860312156104e9578182fd5b6104f284610488565b925061050060208501610488565b9150604084013590509250925092565b60008060408385031215610522578182fd5b823567ffffffffffffffff80821115610539578384fd5b818501915085601f83011261054c578384fd5b81356020828211156105605761056061066f565b808202604051601f19603f830116810181811086821117156105845761058461066f565b604052838152828101945085830182870184018b10156105a2578889fd5b8896505b848710156105cb576105b781610488565b8652600196909601959483019483016105a6565b5096506105db90508782016104a4565b9450505050509250929050565b6000806000606084860312156105fc578283fd5b505081359360208301359350604090920135919050565b6020808252818101527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604082015260600190565b600060001982141561066857634e487b7160e01b81526011600452602481fd5b5060010190565b634e487b7160e01b600052604160045260246000fdfea2646970667358221220794dc56466c862abb3253fc368beb6975b5cbd668ae382e60909396e20c28df664736f6c63430008020033",
+		"r": "0x4a384913ff2353e72131bbc2815165d0fe812a12d69725ab29a5c6c7eaa78c7f",
+		"s": "0x4df6afe77fd52f2fc77fd78327837eea70310567c373d5e8106bb792d09f6214",
+		"v": 230,
+		"creates": "0xb877cb192a352dfeC16575529FB13f4843927bb8",
+		"chainId": 97
+	}
+}

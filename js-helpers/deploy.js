@@ -38,6 +38,12 @@ const chainIdByName = (chainName) => {
   }
 };
 
+function sleepFor(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 const chainNameById = (chainId) => {
   switch (parseInt(chainId, 10)) {
     case 1: return 'Mainnet';
@@ -237,5 +243,6 @@ module.exports = {
   toWei,
   toEth,
   toBN,
-  toStr
+  toStr,
+  sleepFor
 };

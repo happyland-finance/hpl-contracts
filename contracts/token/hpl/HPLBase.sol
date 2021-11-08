@@ -1,12 +1,12 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "./TokenBurnableUpgradeable.sol";
+import "../TokenBurnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "../interfaces/ITransferFee.sol";
-import "../interfaces/ILiquidityHolding.sol";
-import "../lib/BlackholePrevention.sol";
+import "../../interfaces/ITransferFee.sol";
+import "../../interfaces/ILiquidityHolding.sol";
+import "../../lib/BlackholePrevention.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 contract HPLBase is
@@ -31,7 +31,7 @@ contract HPLBase is
         __Ownable_init();
 
         //supply 500M
-        _mint(_tokenReceiver, 500 * 1000000 * 10**decimals());
+        _mint(_tokenReceiver, 400 * 1000000 * 10**decimals());
         stakingRewardTreasury = _stakingRewardTreasury;
         liquidityHolder = ILiquidityHolding(_liquidityHolder);
         transferFee = ITransferFee(_transferFee);
@@ -118,7 +118,7 @@ contract HPLBase is
             emit Transfer(sender, address(0), burnAmount);
             emit Transfer(sender, stakingRewardTreasury, stakingRewardTreasuryAmount);
             emit Transfer(sender, address(liquidityHolder), liquidityHolderAmount);
-            emit Transfer(sender, recipient, amount);
+            emit Transfer(sender, recipient, amount - burnAmount - stakingRewardTreasuryAmount - liquidityHolderAmount);
         } else {
             _balances[recipient] += amount;
              emit Transfer(sender, recipient, amount);

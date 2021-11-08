@@ -1,8 +1,8 @@
 pragma solidity ^0.8.0;
-import "../interfaces/ITransferFee.sol";
+import "../../interfaces/ITransferFee.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract TransferFee is ITransferFee, Ownable {
+contract TransferFeeHPW is ITransferFee, Ownable {
     mapping(address => bool) public zeroFeeList;
 
     event ZeroFeeList(address _addr, bool val);
@@ -12,9 +12,9 @@ contract TransferFee is ITransferFee, Ownable {
 
     constructor() {
         zeroFeeList[msg.sender] = true;
-        stakeRewardFee = 50;
-        liquidityFee = 50;
-        burnFee = 50;
+        stakeRewardFee = 0;
+        liquidityFee = 300;
+        burnFee = 200;
     }
 
     function setZeroFeeList(address[] memory _addrs, bool _val)
