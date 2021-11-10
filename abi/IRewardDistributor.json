@@ -1,0 +1,25 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_recipient",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_hpl",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_hpw",
+        "type": "uint256"
+      }
+    ],
+    "name": "distributeReward",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
