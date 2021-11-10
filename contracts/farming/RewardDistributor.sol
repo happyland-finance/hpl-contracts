@@ -37,7 +37,7 @@ contract RewardDistributor is Initializable, BlackholePreventionOwnable, IReward
     event Unlock(address token, address user, uint256 amount);
     event SetLocker(address locker, bool val);
 
-    function initialize(address _devAddress, address _hpl, address _hpw, uint256 _hplVesting, uint256 _hpwVesting)
+    function initialize(address _devAddress, address _hpl, address _hpw, uint256 _hplVesting, uint256 _hpwVesting, address _locker)
         external
         initializer
     {
@@ -48,6 +48,7 @@ contract RewardDistributor is Initializable, BlackholePreventionOwnable, IReward
         hpwVestingPeriod = _hpwVesting > 0 ? _hpwVesting : hpwVestingPeriod;
         vestingPeriod[_hpl] = hplVestingPeriod;
         vestingPeriod[_hpw] = hpwVestingPeriod;
+        lockers[_locker] = true;
     }
 
     function setDevAddress(address _devAddress) external onlyOwner {
@@ -98,7 +99,7 @@ contract RewardDistributor is Initializable, BlackholePreventionOwnable, IReward
         }
     }
 
-    function distributeReward(address _addr, uint256 _hplAmount, uint256 _hpwAmount) external override{
+    function distributeReward(address _addr, uint256 _hplAmount, uint256 _hpwAmount) external override {
         //we add this check for avoiding too much vesting
         require(lockers[msg.sender], "only locker can lock");
 

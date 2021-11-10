@@ -352,6 +352,11 @@
         "internalType": "uint256",
         "name": "_hpwVesting",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_locker",
+        "type": "address"
       }
     ],
     "name": "initialize",

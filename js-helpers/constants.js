@@ -6,8 +6,16 @@ module.exports = {
         return "0x19a9e6E92e8A896cF3e23eC5B862edDa82bF65ea"
     },
     getStakingRewardTreasury: function (chainId) {
-        //TODO: add mainnet
-        return "0xf4e1e3cD1227dFe8B03d4fF3FBC422d483b31bf7"
+        if (chainId == 56) {
+            return "0x43FFb1f9ebdcAA25b6b1887e81359017E66fcB5a"
+        }
+        return "0x4Dcfc32c29dA93fCa65A7f6Eb57b5253217846CF"
+    },
+    getDevRewardAddress: function (chainId) {
+        if (chainId == 56) {
+            return "0x726dCB5489e27E9712fC6dBc59690Fdc5aAA7e91"
+        }
+        return "0x4Dcfc32c29dA93fCa65A7f6Eb57b5253217846CF"
     },
     getRouter: function (chainId) {
         if (chainId == 56) {
