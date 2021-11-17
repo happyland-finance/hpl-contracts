@@ -31,8 +31,8 @@ module.exports = async (hre) => {
 
   log('Deploying Land...')
   const Land = await ethers.getContractFactory('Land')
-  const LandInstance = await Land.deploy()
-  const land = await LandInstance.deployed()
+  const land = await upgrades.deployProxy(Land, [ethers.constants.AddressZero], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
+
   log('Land address : ', land.address)
   deployData['Land'] = {
     abi: getContractAbi('Land'),
@@ -40,21 +40,32 @@ module.exports = async (hre) => {
     deployTransaction: land.deployTransaction,
   }
 
-  log('Deploying WareHouse...')
-  const WareHouse = await ethers.getContractFactory('WareHouse')
-  const WareHouseInstance = await WareHouse.deploy()
-  const wareHouse = await WareHouseInstance.deployed()
-  log('WareHouse address : ', wareHouse.address)
-  deployData['WareHouse'] = {
-    abi: getContractAbi('WareHouse'),
-    address: wareHouse.address,
-    deployTransaction: wareHouse.deployTransaction,
+  log('Deploying House...')
+  const House = await ethers.getContractFactory('House')
+  const house = await upgrades.deployProxy(House, [ethers.constants.AddressZero], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
+  log('House address : ', house.address)
+  deployData['House'] = {
+    abi: getContractAbi('House'),
+    address: house.address,
+    deployTransaction: house.deployTransaction,
   }
 
   log('Deploying NFTSale...')
+
+  let landSettings = constants.getLandPrices(chainId)
+  let landRarities = landSettings.rarites
+  let landPrices = landSettings.prices
+
+  let houseSettings = constants.getHousePrices(chainId)
+  let houseRarities = houseSettings.rarites
+  let housePrices = houseSettings.prices
+
+  landPrices = landPrices.map(p => ethers.utils.parseEther(p))
+  housePrices = housePrices.map(p => ethers.utils.parseEther(p))
+
   const NFTSale = await ethers.getContractFactory('NFTSale')
-  const NFTSaleInstance = await NFTSale.deploy()
-  const nftSale = await NFTSaleInstance.deployed()
+  const nftSale = await upgrades.deployProxy(NFTSale, [house.address, land.address, houseRarities, housePrices, landRarities, landPrices, constants.getNFTSaleFeeTo(chainId)], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
+  
   log('NFTSale address : ', nftSale.address)
   deployData['NFTSale'] = {
     abi: getContractAbi('NFTSale'),
@@ -62,24 +73,10 @@ module.exports = async (hre) => {
     deployTransaction: nftSale.deployTransaction,
   }
 
-  log('Initializing Land...')
-  await land.initialize(nftSale.address)
-  log('Initializing WareHouse...')
-  await wareHouse.initialize(nftSale.address)
-
-  log('Initializing NFTSale...')
-  let landPrices = constants.getLandPrices(chainId)
-  let rarities = landPrices.rarites
-  let prices = landPrices.prices
-  prices = prices.map(p => ethers.utils.parseEther(p))
-  await nftSale.initialize(
-    wareHouse.address,
-    land.address,
-    ethers.utils.parseEther(constants.getWareHousePrice(chainId)),
-    rarities,
-    prices,
-    constants.getNFTSaleFeeTo(chainId)
-  )
+  log('Setting factory for Land...')
+  await land.setFactory(nftSale.address)
+  log('Setting factory for House...')
+  await house.setFactory(nftSale.address)
 
   saveDeploymentData(chainId, deployData)
   log('\n  Contract Deployment Data saved to "deployments" directory.')

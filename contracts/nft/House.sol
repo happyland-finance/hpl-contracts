@@ -1,28 +1,45 @@
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "../interfaces/IWareHouse.sol";
-import "../lib/BlackholePreventionOwnable.sol";
 
-contract WareHouse is ERC721Enumerable, IWareHouse, BlackholePreventionOwnable, Initializable {
-    using SafeMath for uint256;
-    using Strings for uint256;
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "../interfaces/IHouse.sol";
+import "../lib/BlackholePrevention.sol";
 
-    uint256 public currentId = 0;
+contract House is
+    Initializable,
+    OwnableUpgradeable,
+    ERC721EnumerableUpgradeable,
+    IHouse,
+    BlackholePrevention,
+    UUPSUpgradeable
+{
+    using SafeMathUpgradeable for uint256;
+    using StringsUpgradeable for uint256;
+
+    uint256 public currentId;
 
     string public baseURI;
     mapping(uint256 => string) public tokenURIs;
 
     mapping(address => uint256) public latestTokenMinted;
+    mapping(uint256 => uint256) public tokenRarityMapping;
     address public factory;
 
-    constructor() ERC721("HappyLand WareHouse NFT", "HWHNFT") {}
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     function initialize(address _nftFactory) external initializer {
+        __Ownable_init();
+        __ERC721_init("HappyLand House NFT", "HHouseNFT");
+        currentId = 0;
         factory = _nftFactory;
     }
 
@@ -82,7 +99,7 @@ contract WareHouse is ERC721Enumerable, IWareHouse, BlackholePreventionOwnable, 
     }
 
     //client compute result index off-chain, the function will verify it
-    function mint(address _recipient)
+    function mint(address _recipient, uint256 _rarity)
         external
         override
         onlyFactory
@@ -90,9 +107,11 @@ contract WareHouse is ERC721Enumerable, IWareHouse, BlackholePreventionOwnable, 
     {
         currentId = currentId.add(1);
         uint256 tokenId = currentId;
+        require(tokenRarityMapping[tokenId] == 0, "Token already exists");
 
         _mint(_recipient, tokenId);
         latestTokenMinted[_recipient] = tokenId;
+        tokenRarityMapping[tokenId] = _rarity;
         return tokenId;
     }
 

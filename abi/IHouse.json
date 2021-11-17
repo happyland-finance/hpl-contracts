@@ -5,6 +5,11 @@
         "internalType": "address",
         "name": "_recipient",
         "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_rarity",
+        "type": "uint256"
       }
     ],
     "name": "mint",

@@ -33,6 +33,9 @@ module.exports = {
     getLandPrices: function(chainId) {
         return {rarites: [1, 2, 3], prices: ["0.1", "0.2", "0.3"]}
     },
+    getHousePrices: function(chainId) {
+        return {rarites: [1, 2, 3], prices: ["0.1", "0.2", "0.3"]}
+    },
 
     getPairedToken: function(chainId) {
         if (chainId == 56) {

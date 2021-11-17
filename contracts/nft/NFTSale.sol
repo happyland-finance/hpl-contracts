@@ -1,72 +1,116 @@
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "../interfaces/IWareHouse.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "../interfaces/IHouse.sol";
 import "../interfaces/ILand.sol";
-import "../lib/BlackholePreventionOwnable.sol";
+import "../lib/BlackholePrevention.sol";
 
-contract NFTSale is BlackholePreventionOwnable, Initializable, Pausable {
-    using Address for address payable;
-    using SafeMath for uint256;
+contract NFTSale is
+    Initializable,
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    ERC721EnumerableUpgradeable,
+    BlackholePrevention,
+    UUPSUpgradeable
+{
+    using AddressUpgradeable for address payable;
+    using SafeMathUpgradeable for uint256;
 
     ILand public land;
-    IWareHouse public wareHouse;
+    IHouse public house;
     address payable public feeTo;
 
     //rarity => price
     mapping(uint256 => uint256) public landPriceMap;
-
-    //default warehouse price with minimal conditions to contain basic harvested items
-    uint256 public wareHousePrice;
+    mapping(uint256 => uint256) public housePriceMap;
 
     struct CurrentSale {
         uint256 startTime;
         uint256 endTime;
         uint256[] landCountRarities;
-        uint256[] landCountForSales;    //corresponding rarity
-        mapping(uint256 => uint256) rarityMap;  //mapping from rarity to index + 1 in array landCountRarities
-        uint256 wareHouseCountForSale;
+        uint256[] landCountForSales; //corresponding rarity
+        mapping(uint256 => uint256) landRarityMap; //mapping from rarity to index + 1 in array landCountRarities
         uint256[] currentLandCounts;
-        uint256 currentWareHouseCount;
+
+        uint256[] houseCountRarities;
+        uint256[] houseCountForSales; //corresponding rarity
+        mapping(uint256 => uint256) houseRarityMap; //mapping from rarity to index + 1 in array houseCountRarities
+        uint256[] currentHouseCounts;
     }
     CurrentSale public currentSale;
 
-    event SetWareHousePrice(uint256 _price, address _setter);
+    event SetHousePrice(uint256 _price, uint256 _rarity, address _setter);
     event SetLandPrice(uint256 _price, uint256 _rarity, address _setter);
 
     modifier canBuyLand(uint256 _rarity) {
-        require(currentSale.startTime <= block.timestamp && block.timestamp <= currentSale.endTime, "Time expired");
-        uint256 rarityIndex = currentSale.rarityMap[_rarity];
-        require(rarityIndex > 0 && rarityIndex<= currentSale.landCountRarities.length, "invalid rarity");
-        require(currentSale.landCountForSales[rarityIndex - 1] > currentSale.currentLandCounts[rarityIndex - 1], "land sold out");
+        require(
+            currentSale.startTime <= block.timestamp &&
+                block.timestamp <= currentSale.endTime,
+            "Time expired"
+        );
+        uint256 rarityIndex = currentSale.landRarityMap[_rarity];
+        require(
+            rarityIndex > 0 &&
+                rarityIndex <= currentSale.landCountRarities.length,
+            "invalid rarity"
+        );
+        require(
+            currentSale.landCountForSales[rarityIndex - 1] >
+                currentSale.currentLandCounts[rarityIndex - 1],
+            "land sold out"
+        );
         _;
     }
 
-    modifier canBuyWareHouse() {
-        require(currentSale.startTime <= block.timestamp && block.timestamp <= currentSale.endTime, "Time expired");
-        require(currentSale.wareHouseCountForSale > currentSale.currentWareHouseCount, "warehouse sold out");
+    modifier canBuyHouse(uint256 _rarity) {
+        require(
+            currentSale.startTime <= block.timestamp &&
+                block.timestamp <= currentSale.endTime,
+            "Time expired"
+        );
+        uint256 rarityIndex = currentSale.houseRarityMap[_rarity];
+        require(
+            rarityIndex > 0 &&
+                rarityIndex <= currentSale.houseCountRarities.length,
+            "invalid rarity"
+        );
+        require(
+            currentSale.houseCountForSales[rarityIndex - 1] >
+                currentSale.currentHouseCounts[rarityIndex - 1],
+            "house sold out"
+        );
         _;
     }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     function initialize(
-        address _wareHouse,
+        address _house,
         address _land,
-        uint256 _wareHousePrice,
-        uint256[] memory _supportedRarities,
+        uint256[] memory _supportedHouseRarities,
+        uint256[] memory _housePricesForRarities,
+        uint256[] memory _supportedLandRarities,
         uint256[] memory _landPricesForRarities,
         address payable _feeTo
     ) external initializer {
-        wareHouse = IWareHouse(_wareHouse);
+        __Ownable_init();
+
+        house = IHouse(_house);
         land = ILand(_land);
         feeTo = _feeTo;
 
-        setWareHousePrice(_wareHousePrice);
-        setLandPrice(_supportedRarities, _landPricesForRarities);
+        setHousePrice(_supportedHouseRarities, _housePricesForRarities);
+        setLandPrice(_supportedLandRarities, _landPricesForRarities);
     }
 
     function setLandPrice(
@@ -75,7 +119,7 @@ contract NFTSale is BlackholePreventionOwnable, Initializable, Pausable {
     ) public onlyOwner {
         require(
             _supportedRarities.length == _landPricesForRarities.length,
-            "initialize: Invalid input parameter length"
+            "setLandPrice: Invalid input parameter length"
         );
         for (uint256 i = 0; i < _supportedRarities.length; i++) {
             landPriceMap[_supportedRarities[i]] = _landPricesForRarities[i];
@@ -87,9 +131,22 @@ contract NFTSale is BlackholePreventionOwnable, Initializable, Pausable {
         }
     }
 
-    function setWareHousePrice(uint256 _wareHousePrice) public onlyOwner {
-        wareHousePrice = _wareHousePrice;
-        emit SetWareHousePrice(_wareHousePrice, msg.sender);
+    function setHousePrice(
+        uint256[] memory _supportedRarities,
+        uint256[] memory _housePricesForRarities
+    ) public onlyOwner {
+        require(
+            _supportedRarities.length == _housePricesForRarities.length,
+            "setHousePrice: Invalid input parameter length"
+        );
+        for (uint256 i = 0; i < _supportedRarities.length; i++) {
+            housePriceMap[_supportedRarities[i]] = _housePricesForRarities[i];
+            emit SetHousePrice(
+                _housePricesForRarities[i],
+                _supportedRarities[i],
+                msg.sender
+            );
+        }
     }
 
     function setFeeTo(address payable _feeTo) external onlyOwner {
@@ -109,9 +166,17 @@ contract NFTSale is BlackholePreventionOwnable, Initializable, Pausable {
         uint256 _duration,
         uint256[] memory _landCountRarities,
         uint256[] memory _landCountForSales,
-        uint256 _wareHouseCountForSale
+        uint256[] memory _houseCountRarities,
+        uint256[] memory _houseCountForSales
     ) external onlyOwner {
-        require(_landCountRarities.length == _landCountForSales.length, "Invalid input length");
+        require(
+            _landCountRarities.length == _landCountForSales.length,
+            "setNewSale: land Invalid input length"
+        );
+        require(
+            _houseCountRarities.length == _houseCountForSales.length,
+            "setNewSale: house Invalid input length"
+        );
         currentSale.startTime = _startTime > block.timestamp
             ? _startTime
             : block.timestamp;
@@ -119,14 +184,21 @@ contract NFTSale is BlackholePreventionOwnable, Initializable, Pausable {
 
         currentSale.landCountRarities = _landCountRarities;
         currentSale.landCountForSales = _landCountForSales;
-        for(uint256 i = 0; i < _landCountRarities.length; i++) {
-            currentSale.rarityMap[_landCountRarities[i]] = i + 1;   // + 1 to avoid 0 by default
+        for (uint256 i = 0; i < _landCountRarities.length; i++) {
+            currentSale.landRarityMap[_landCountRarities[i]] = i + 1; // + 1 to avoid 0 by default
         }
+        currentSale.currentLandCounts = new uint256[](
+            _landCountRarities.length
+        );
         
-        currentSale.wareHouseCountForSale = _wareHouseCountForSale;
-
-        currentSale.currentLandCounts = new uint256[](_landCountRarities.length);
-        currentSale.currentWareHouseCount = 0;
+        currentSale.houseCountRarities = _houseCountRarities;
+        currentSale.houseCountForSales = _houseCountForSales;
+        for (uint256 i = 0; i < _houseCountRarities.length; i++) {
+            currentSale.houseRarityMap[_houseCountRarities[i]] = i + 1; // + 1 to avoid 0 by default
+        }
+        currentSale.currentHouseCounts = new uint256[](
+            _houseCountRarities.length
+        );
     }
 
     function updateCurrentSale(
@@ -134,21 +206,31 @@ contract NFTSale is BlackholePreventionOwnable, Initializable, Pausable {
         uint256 _duration,
         uint256[] memory _landCountRarities,
         uint256[] memory _landCountForSales,
-        uint256 _wareHouseCountForSale
+        uint256[] memory _houseCountRarities,
+        uint256[] memory _houseCountForSales
     ) external onlyOwner {
         currentSale.startTime = _startTime;
         currentSale.endTime = currentSale.startTime.add(_duration);
 
         currentSale.landCountRarities = _landCountRarities;
         currentSale.landCountForSales = _landCountForSales;
-        for(uint256 i = 0; i < _landCountRarities.length; i++) {
-            currentSale.rarityMap[_landCountRarities[i]] = i;
+        for (uint256 i = 0; i < _landCountRarities.length; i++) {
+            currentSale.landRarityMap[_landCountRarities[i]] = i;
         }
-        
-        currentSale.wareHouseCountForSale = _wareHouseCountForSale;
+
+        currentSale.houseCountRarities = _houseCountRarities;
+        currentSale.houseCountForSales = _houseCountForSales;
+        for (uint256 i = 0; i < _houseCountRarities.length; i++) {
+            currentSale.houseRarityMap[_houseCountRarities[i]] = i + 1; // + 1 to avoid 0 by default
+        }
     }
 
-    function buyLand(uint256 _rarity) public payable whenNotPaused canBuyLand(_rarity) {
+    function buyLand(uint256 _rarity)
+        public
+        payable
+        whenNotPaused
+        canBuyLand(_rarity)
+    {
         require(landPriceMap[_rarity] != 0, "Unsupported rarity");
         require(
             msg.value >= landPriceMap[_rarity],
@@ -158,33 +240,36 @@ contract NFTSale is BlackholePreventionOwnable, Initializable, Pausable {
         land.mint(msg.sender, _rarity);
 
         //update land count
-        uint256 rarityIndex = currentSale.rarityMap[_rarity];
+        uint256 rarityIndex = currentSale.landRarityMap[_rarity];
         currentSale.currentLandCounts[rarityIndex]++;
 
         transferToFeeTo();
     }
 
-    function buyWareHouse() public payable whenNotPaused canBuyWareHouse {
-        require(wareHousePrice != 0, "Unsupported rarity");
+    function buyHouse(uint256 _rarity) public payable whenNotPaused canBuyHouse(_rarity) {
+        require(housePriceMap[_rarity] != 0, "Unsupported rarity");
         require(
-            msg.value >= wareHousePrice,
-            "buyWareHouse:: Payment not enough"
+            msg.value >= housePriceMap[_rarity],
+            "buyHouse:: Payment not enough"
         );
 
-        wareHouse.mint(msg.sender);
-        currentSale.currentWareHouseCount++;
+        house.mint(msg.sender, _rarity);
+
+        //update land count
+        uint256 rarityIndex = currentSale.houseRarityMap[_rarity];
+        currentSale.currentHouseCounts[rarityIndex]++;
 
         transferToFeeTo();
     }
 
     function buyCombo(uint256 _rarity) external payable whenNotPaused {
         require(
-            msg.value >= landPriceMap[_rarity] + wareHousePrice,
+            msg.value >= landPriceMap[_rarity] + housePriceMap[_rarity],
             "buyCombo:: Payment not enough"
         );
 
         buyLand(_rarity);
-        buyWareHouse();
+        buyHouse(_rarity);
 
         transferToFeeTo();
     }
@@ -195,23 +280,53 @@ contract NFTSale is BlackholePreventionOwnable, Initializable, Pausable {
         }
     }
 
-    function getCurrentSaleInfo() external view returns (
-        uint256 startTime,
-        uint256 endTime,
-        uint256[] memory landCountRarities,
-        uint256[] memory landCountForSales,    
-        uint256 wareHouseCountForSale,
-        uint256[] memory currentLandCounts,
-        uint256 currentWareHouseCount
-    ) {
+    function getCurrentSaleInfo()
+        external
+        view
+        returns (
+            uint256 startTime,
+            uint256 endTime,
+            uint256[] memory landCountRarities,
+            uint256[] memory landCountForSales,
+            uint256[] memory currentLandCounts,
+            uint256[] memory houseCountRarities,
+            uint256[] memory houseCountForSales,
+            uint256[] memory currentHouseCounts
+        )
+    {
         return (
             currentSale.startTime,
             currentSale.endTime,
             currentSale.landCountRarities,
             currentSale.landCountForSales,
-            currentSale.wareHouseCountForSale,
             currentSale.currentLandCounts,
-            currentSale.currentWareHouseCount
+            currentSale.houseCountRarities,
+            currentSale.houseCountForSales,
+            currentSale.currentHouseCounts
         );
+    }
+
+    function withdrawEther(address payable receiver, uint256 amount)
+        external
+        virtual
+        onlyOwner
+    {
+        _withdrawEther(receiver, amount);
+    }
+
+    function withdrawERC20(
+        address payable receiver,
+        address tokenAddress,
+        uint256 amount
+    ) external virtual onlyOwner {
+        _withdrawERC20(receiver, tokenAddress, amount);
+    }
+
+    function withdrawERC721(
+        address payable receiver,
+        address tokenAddress,
+        uint256 tokenId
+    ) external virtual onlyOwner {
+        _withdrawERC721(receiver, tokenAddress, tokenId);
     }
 }

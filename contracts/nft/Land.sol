@@ -1,17 +1,27 @@
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "../interfaces/ILand.sol";
-import "../lib/BlackholePreventionOwnable.sol";
-contract Land is ERC721Enumerable, ILand, BlackholePreventionOwnable, Initializable {
-    using SafeMath for uint256;
-    using Strings for uint256;
+import "../lib/BlackholePrevention.sol";
 
-    uint256 public currentId = 0;
+contract Land is
+    Initializable,
+    OwnableUpgradeable,
+    ERC721EnumerableUpgradeable,
+    ILand,
+    BlackholePrevention,
+    UUPSUpgradeable
+{
+    using SafeMathUpgradeable for uint256;
+    using StringsUpgradeable for uint256;
+
+    uint256 public currentId;
 
     string public baseURI;
     mapping(uint256 => string) public tokenURIs;
@@ -19,9 +29,16 @@ contract Land is ERC721Enumerable, ILand, BlackholePreventionOwnable, Initializa
     mapping(address => uint256) public latestTokenMinted;
     mapping(uint256 => uint256) public tokenRarityMapping;
     address public factory;
-    constructor() ERC721("HappyLand Land NFT", "HLandNFT") {}
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     function initialize(address _nftFactory) external initializer {
+        __Ownable_init();
+        __ERC721_init("HappyLand Land NFT", "HLandNFT");
+        currentId = 0;
         factory = _nftFactory;
     }
 
@@ -29,8 +46,14 @@ contract Land is ERC721Enumerable, ILand, BlackholePreventionOwnable, Initializa
         baseURI = _b;
     }
 
-    function setTokenURI(uint256 tokenId, string memory _tokenURI) external onlyOwner {
-        require(_exists(tokenId), "ERC721Metadata: URI set of nonexistent token");
+    function setTokenURI(uint256 tokenId, string memory _tokenURI)
+        external
+        onlyOwner
+    {
+        require(
+            _exists(tokenId),
+            "ERC721Metadata: URI set of nonexistent token"
+        );
         tokenURIs[tokenId] = _tokenURI;
     }
 
@@ -38,8 +61,17 @@ contract Land is ERC721Enumerable, ILand, BlackholePreventionOwnable, Initializa
         return baseURI;
     }
 
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        virtual
+        override
+        returns (string memory)
+    {
+        require(
+            _exists(tokenId),
+            "ERC721Metadata: URI query for nonexistent token"
+        );
 
         string memory _tokenURI = tokenURIs[tokenId];
         string memory base = _baseURI();
@@ -66,10 +98,12 @@ contract Land is ERC721Enumerable, ILand, BlackholePreventionOwnable, Initializa
     }
 
     //client compute result index off-chain, the function will verify it
-    function mint(
-        address _recipient,
-        uint256 _rarity
-    ) external override onlyFactory returns (uint256 _tokenId) {
+    function mint(address _recipient, uint256 _rarity)
+        external
+        override
+        onlyFactory
+        returns (uint256 _tokenId)
+    {
         currentId = currentId.add(1);
         uint256 tokenId = currentId;
         require(tokenRarityMapping[tokenId] == 0, "Token already exists");
@@ -82,5 +116,29 @@ contract Land is ERC721Enumerable, ILand, BlackholePreventionOwnable, Initializa
 
     function burn(uint256 tokenId) external {
         _burn(tokenId);
+    }
+
+    function withdrawEther(address payable receiver, uint256 amount)
+        external
+        virtual
+        onlyOwner
+    {
+        _withdrawEther(receiver, amount);
+    }
+
+    function withdrawERC20(
+        address payable receiver,
+        address tokenAddress,
+        uint256 amount
+    ) external virtual onlyOwner {
+        _withdrawERC20(receiver, tokenAddress, amount);
+    }
+
+    function withdrawERC721(
+        address payable receiver,
+        address tokenAddress,
+        uint256 tokenId
+    ) external virtual onlyOwner {
+        _withdrawERC721(receiver, tokenAddress, tokenId);
     }
 }
