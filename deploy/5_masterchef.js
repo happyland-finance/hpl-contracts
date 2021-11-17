@@ -36,17 +36,6 @@ module.exports = async (hre) => {
   let hplAddress = require(`../deployments/${chainId}/HPL.json`).address
   let hpwAddress = require(`../deployments/${chainId}/HPW.json`).address
 
-  log("Deploying MasterChef...");
-  const MasterChef = await ethers.getContractFactory("MasterChef")
-  const MasterChefInstance = await MasterChef.deploy()
-  const masterchef = await MasterChefInstance.deployed()
-  log("MasterChef address : ", masterchef.address);
-  deployData['MasterChef'] = {
-    abi: getContractAbi('MasterChef'),
-    address: masterchef.address,
-    deployTransaction: masterchef.deployTransaction,
-  }
-
   log("Deploying RewardDistributor...");
   const RewardDistributor = await ethers.getContractFactory("RewardDistributor")
   const RewardDistributorInstance = await RewardDistributor.deploy()
@@ -69,8 +58,15 @@ module.exports = async (hre) => {
     deployTransaction: tokenLock.deployTransaction,
   }
 
-  log("Initializing MasterChef...")
-  await masterchef.initialize(hplAddress, hpwAddress, ethers.utils.parseEther('0.9'), ethers.utils.parseEther('2'), 0, rewardDistributor.address, tokenLock.address)
+  log("Deploying MasterChef...");
+  const MasterChef = await ethers.getContractFactory("MasterChef")
+  const masterchef = await upgrades.deployProxy(MasterChef, [hplAddress, hpwAddress, ethers.utils.parseEther('0.9'), ethers.utils.parseEther('2'), 0, rewardDistributor.address, tokenLock.address], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
+  log("MasterChef address : ", masterchef.address);
+  deployData['MasterChef'] = {
+    abi: getContractAbi('MasterChef'),
+    address: masterchef.address,
+    deployTransaction: masterchef.deployTransaction,
+  }
 
   log("Initializing RewardDistributor...")
   await rewardDistributor.initialize(constants.getDevRewardAddress(chainId), hplAddress, hpwAddress, 0, 0, masterchef.address)
@@ -86,18 +82,18 @@ module.exports = async (hre) => {
   log("Set whitelist...")
   const HPL = await ethers.getContractFactory("HPL")
   let hplContract = await HPL.attach(hplAddress)
-  let transferFeeHPLAddress = hplContract.transferFee()
-  let transferFeeHPWAddress = hpwContract.transferFee()
+  let hplHookAddress = hplContract.tokenHook()
+  let hpwHookAddress = hpwContract.tokenHook()
 
-  let TransferFee = await ethers.getContractFactory("TransferFee")
-  let transferFeeContract = await TransferFee.attach(transferFeeHPLAddress)
+  let HPLHook = await ethers.getContractFactory("HPLHook")
+  let hplHookContract = await HPLHook.attach(hplHookAddress)
   log("Set whitelist for HPL...")
-  await transferFeeContract.setZeroFeeList([masterchef.address, rewardDistributor.address, tokenLock.address], true)
+  await hplHookContract.setZeroFeeList([masterchef.address, rewardDistributor.address, tokenLock.address], true)
 
-  let TransferFeeHPW = await ethers.getContractFactory("TransferFeeHPW")
-  let transferFeeHPWContract = await TransferFeeHPW.attach(transferFeeHPWAddress)
+  let HPWHook = await ethers.getContractFactory("HPWHook")
+  let hpwHookContract = await HPWHook.attach(hpwHookAddress)
   log("Set whitelist for HPW...")
-  await transferFeeHPWContract.setZeroFeeList([masterchef.address, rewardDistributor.address, tokenLock.address], true)
+  await hpwHookContract.setZeroFeeList([masterchef.address, rewardDistributor.address, tokenLock.address], true)
 
   saveDeploymentData(chainId, deployData);
   log('\n  Contract Deployment Data saved to "deployments" directory.');

@@ -2,15 +2,15 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "../interfaces/IRewardDistributor.sol";
 import "../interfaces/ITokenLock.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 
 // interface IMigratorChef {
 //     // Perform LP token migration from legacy UniswapV2 to HPL.
@@ -32,9 +32,13 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 // distributed and the community can show to govern itself.
 //
 // Have fun reading it. Hopefully it's bug-free. God bless.
-contract MasterChef is Ownable, Initializable {
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+contract MasterChef is
+    Initializable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
+    using SafeMathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     // Info of each user.
     struct UserInfo {
         uint256 amount; // How many LP tokens the user has provided.
@@ -54,15 +58,15 @@ contract MasterChef is Ownable, Initializable {
     }
     // Info of each pool.
     struct PoolInfo {
-        IERC20 lpToken; // Address of LP token contract., address is 0 if it is NFT pool
+        IERC20Upgradeable lpToken; // Address of LP token contract., address is 0 if it is NFT pool
         uint256 allocPoint; // How many allocation points assigned to this pool. HPLPoint to distribute per block.
         uint256 lastRewardBlock; // Last block number that HPLPoint distribution occurs.
         uint256 accHPLPerShare; // Accumulated HPLPoint per share, times 1e12. See below.
         uint256 accHPWPerShare; // Accumulated HPLPoint per share, times 1e12. See below.
     }
     // The HPL TOKEN!
-    IERC20 public hpl;
-    IERC20 public hpw;
+    IERC20Upgradeable public hpl;
+    IERC20Upgradeable public hpw;
     IRewardDistributor public rewardDistributor;
     // Dev address.
     // Block number when bonus HPL period ends.
@@ -72,7 +76,7 @@ contract MasterChef is Ownable, Initializable {
     uint256 public hpwPerBlock;
     // Bonus muliplier for early HPL makers.
     uint256 public constant BONUS_MULTIPLIER = 1;
-    uint256 public poolLockedTime = 2 days;
+    uint256 public poolLockedTime;
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
     //IMigratorChef public migrator;
     // Info of each pool.
@@ -80,10 +84,10 @@ contract MasterChef is Ownable, Initializable {
     // Info of each user that stakes LP tokens.
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
-    uint256 public totalAllocPoint = 0;
+    uint256 public totalAllocPoint;
     // The block number when HPL mining starts.
     uint256 public startBlock;
-    bool public allowEmergencyWithdraw = false;
+    bool public allowEmergencyWithdraw;
     ITokenLock public tokenLock;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -99,15 +103,25 @@ contract MasterChef is Ownable, Initializable {
         uint256 amount
     );
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
+
     function initialize(
-        IERC20 _hpl,
-        IERC20 _hpw,
+        IERC20Upgradeable _hpl,
+        IERC20Upgradeable _hpw,
         uint256 _hplPerBlock,
         uint256 _hpwPerBlock,
         uint256 _startBlock,
         address _rewardDistributor,
         address _tokenLock
-    ) external initializer onlyOwner {
+    ) external initializer {
+        __Ownable_init();
+
+        totalAllocPoint = 0;
+        allowEmergencyWithdraw = false;
+        poolLockedTime = 2 days;
         hpl = _hpl;
         hpw = _hpw;
         hplPerBlock = _hplPerBlock;
@@ -118,7 +132,10 @@ contract MasterChef is Ownable, Initializable {
         tokenLock = ITokenLock(_tokenLock);
     }
 
-    function setAllowEmergencyWithdraw(bool _allowEmergencyWithdraw) external onlyOwner {
+    function setAllowEmergencyWithdraw(bool _allowEmergencyWithdraw)
+        external
+        onlyOwner
+    {
         allowEmergencyWithdraw = _allowEmergencyWithdraw;
     }
 
@@ -126,7 +143,10 @@ contract MasterChef is Ownable, Initializable {
         tokenLock = ITokenLock(_tokenLock);
     }
 
-    function setRewardDistributor(address _rewardDistributor) external onlyOwner {
+    function setRewardDistributor(address _rewardDistributor)
+        external
+        onlyOwner
+    {
         rewardDistributor = IRewardDistributor(_rewardDistributor);
     }
 
@@ -152,7 +172,7 @@ contract MasterChef is Ownable, Initializable {
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
         poolInfo.push(
             PoolInfo({
-                lpToken: IERC20(_lpToken),
+                lpToken: IERC20Upgradeable(_lpToken),
                 allocPoint: _allocPoint,
                 lastRewardBlock: lastRewardBlock,
                 accHPLPerShare: 0,
@@ -353,8 +373,13 @@ contract MasterChef is Ownable, Initializable {
         user.hpwRewardDebt = user.amount.mul(pool.accHPWPerShare).div(1e12);
 
         pool.lpToken.safeApprove(address(tokenLock), _amount);
-        tokenLock.lock(address(pool.lpToken), msg.sender, _amount, poolLockedTime);
-        
+        tokenLock.lock(
+            address(pool.lpToken),
+            msg.sender,
+            _amount,
+            poolLockedTime
+        );
+
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
@@ -375,7 +400,11 @@ contract MasterChef is Ownable, Initializable {
     }
 
     // Safe HPL transfer function, just in case if rounding error causes pool to not have enough HPL.
-    function payRewards(address _to, uint256 _hpl, uint256 _hpw) internal {
+    function payRewards(
+        address _to,
+        uint256 _hpl,
+        uint256 _hpw
+    ) internal {
         rewardDistributor.distributeReward(_to, _hpl, _hpw);
     }
 
@@ -409,11 +438,7 @@ contract MasterChef is Ownable, Initializable {
         return tokenLock.getLockInfoByIndexes(_addr, _indexes);
     }
 
-    function getLockInfoLength(address _addr)
-        external
-        view
-        returns (uint256)
-    {
+    function getLockInfoLength(address _addr) external view returns (uint256) {
         return tokenLock.getLockInfoLength(_addr);
-    }  
+    }
 }
