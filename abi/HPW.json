@@ -576,31 +576,13 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_liquidityHolder",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_transferFee",
+        "name": "_tokenHook",
         "type": "address"
       }
     ],
     "name": "initialize",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "liquidityHolder",
-    "outputs": [
-      {
-        "internalType": "contract ILiquidityHolding",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -733,19 +715,6 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_liquidityHolder",
-        "type": "address"
-      }
-    ],
-    "name": "setLiquidityHolding",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address[]",
         "name": "_minters",
         "type": "address[]"
@@ -787,7 +756,7 @@
         "type": "address"
       }
     ],
-    "name": "setTransferFee",
+    "name": "setTokenHook",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -800,6 +769,19 @@
         "internalType": "string",
         "name": "",
         "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "tokenHook",
+    "outputs": [
+      {
+        "internalType": "contract ITokenHook",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -840,19 +822,6 @@
       }
     ],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "transferFee",
-    "outputs": [
-      {
-        "internalType": "contract ITransferFee",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {

@@ -85,7 +85,7 @@ module.exports = async (hre) => {
 
   log("Set whitelist...")
   const HPL = await ethers.getContractFactory("HPL")
-  let hplContract = await HPW.attach(hplAddress)
+  let hplContract = await HPL.attach(hplAddress)
   let transferFeeHPLAddress = hplContract.transferFee()
   let transferFeeHPWAddress = hpwContract.transferFee()
 

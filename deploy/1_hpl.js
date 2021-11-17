@@ -35,22 +35,18 @@ module.exports = async (hre) => {
   const _stakingRewardTreasury = constants.getStakingRewardTreasury(chainId)
   const uniswapRouteAddress = constants.getRouter(chainId)
 
-  log("Deploying LiquidityHolding...");
-  const LiquidityHolding = await ethers.getContractFactory("LiquidityHolding")
-  const liquidityHoldingInstance = await LiquidityHolding.deploy()
-  const liquidityHolding = await liquidityHoldingInstance.deployed()
-  log("LiquidityHolding address : ", liquidityHolding.address);
+  log("Deploying HPLHook...");
+  const HPLHook = await ethers.getContractFactory("HPLHook")
+  const HPLHookInstance = await HPLHook.deploy()
+  const hplhook = await HPLHookInstance.deployed()
+  log("HPLHook address : ", hplhook.address);
 
-  const TransferFee = await ethers.getContractFactory("TransferFee")
-  const transferFeeInstance = await TransferFee.deploy()
-  const transferFee = await transferFeeInstance.deployed()
-  await transferFee.setZeroFeeList([signers[0].address], true)
-  log("TransactionFee address : ", transferFee.address);
+  await hplhook.setZeroFeeList([signers[0].address], true)
 
   log('  Deploying HPL Token...');
   const HPL = await ethers.getContractFactory('HPL');
-  const hpl = await upgrades.deployProxy(HPL, [signers[0].address, _stakingRewardTreasury, liquidityHolding.address, transferFee.address], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
-  await liquidityHolding.initialize(hpl.address, uniswapRouteAddress)
+  const hpl = await upgrades.deployProxy(HPL, [signers[0].address, _stakingRewardTreasury, hplhook.address], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
+  await hplhook.initialize(hpl.address, uniswapRouteAddress)
   log('  - HPL:         ', hpl.address);
 
   //create liqidity pair
@@ -62,22 +58,19 @@ module.exports = async (hre) => {
   await sleepFor(5000)
   let pairAddress = await factory.getPair(hpl.address, pairedToken)
   log('Pair', pairAddress)
-  await liquidityHolding.setLiquidityPair(pairAddress)
+  await hplhook.setLiquidityPair(pairAddress)
+  await hpl.setPancakePairs([pairAddress], true)
 
   deployData['HPL'] = {
     abi: getContractAbi('HPL'),
     address: hpl.address,
     deployTransaction: hpl.deployTransaction,
   }
-  deployData['LiquidityHolding'] = {
-    abi: getContractAbi('LiquidityHolding'),
-    address: liquidityHolding.address,
-    deployTransaction: liquidityHolding.deployTransaction,
-  }
-  deployData['TransferFee'] = {
-    abi: getContractAbi('TransferFee'),
-    address: transferFee.address,
-    deployTransaction: transferFee.deployTransaction,
+
+  deployData['HPLHook'] = {
+    abi: getContractAbi('HPLHook'),
+    address: hplhook.address,
+    deployTransaction: hplhook.deployTransaction,
   }
 
   saveDeploymentData(chainId, deployData);

@@ -4,8 +4,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../TokenBurnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "../../interfaces/ITransferFee.sol";
-import "../../interfaces/ILiquidityHolding.sol";
+import "../../interfaces/ITokenHook.sol";
 import "../../lib/BlackholePrevention.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
@@ -16,20 +15,17 @@ contract HPWBase is
     OwnableUpgradeable,
     BlackholePrevention
 {
-    ITransferFee public transferFee;
-    ILiquidityHolding public liquidityHolder;
+    ITokenHook public tokenHook;
     mapping(address => bool) public pancakePairs;
     mapping(address => bool) public minters;
    
     function initialize(
-        address _liquidityHolder,
-        address _transferFee
+        address _tokenHook
     ) public initializer {
         __ERC20_init("HappyLand Reward Token", "HPW");
         __Ownable_init();
 
-        liquidityHolder = ILiquidityHolding(_liquidityHolder);
-        transferFee = ITransferFee(_transferFee);
+        tokenHook = ITokenHook(_tokenHook);
     }
 
     function setMinters(address[] memory _minters, bool val) external onlyOwner {
@@ -48,15 +44,8 @@ contract HPWBase is
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    function setTransferFee(address _addr) external onlyOwner {
-        transferFee = ITransferFee(_addr);
-    }
-
-    function setLiquidityHolding(address _liquidityHolder)
-        external
-        onlyOwner
-    {
-        liquidityHolder = ILiquidityHolding(_liquidityHolder);
+    function setTokenHook(address _addr) external onlyOwner {
+        tokenHook = ITokenHook(_addr);
     }
 
     function setPancakePairs(address[] memory _pancakePairs, bool val)
@@ -84,8 +73,8 @@ contract HPWBase is
             "ERC20: transfer amount exceeds balance"
         );
 
-        if (!pancakePairs[sender] && address(liquidityHolder) != address(0)) {
-            liquidityHolder.addLiquidity();
+        if (!pancakePairs[sender] && address(tokenHook) != address(0)) {
+            tokenHook.addLiquidity();
         }
 
         unchecked {
@@ -93,26 +82,26 @@ contract HPWBase is
         }
 
         if (
-            address(transferFee) != address(0) &&
-            sender != address(liquidityHolder) &&
-            recipient != address(liquidityHolder)
+            address(tokenHook) != address(0) &&
+            sender != address(tokenHook) &&
+            recipient != address(tokenHook)
         ) {
             (
                 ,
                 uint256 liquidityFee,
                 uint256 burnFee
-            ) = transferFee.getTransferFees(sender, recipient, amount);
+            ) = tokenHook.getTransferFees(sender, recipient, amount);
             uint256 burnAmount = (amount * burnFee) / 10000;
             uint256 liquidityHolderAmount = (amount * liquidityFee) / 10000;
             //burn
             _totalSupply -= burnAmount;
             //liquidityFee
-            _balances[address(liquidityHolder)] += liquidityHolderAmount;
+            _balances[address(tokenHook)] += liquidityHolderAmount;
 
             _balances[recipient] += amount - burnAmount - liquidityHolderAmount;
            
             emit Transfer(sender, address(0), burnAmount);
-            emit Transfer(sender, address(liquidityHolder), liquidityHolderAmount);
+            emit Transfer(sender, address(tokenHook), liquidityHolderAmount);
             emit Transfer(sender, recipient, amount - burnAmount - liquidityHolderAmount);
         } else {
             _balances[recipient] += amount;

@@ -4,8 +4,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../TokenBurnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "../../interfaces/ITransferFee.sol";
-import "../../interfaces/ILiquidityHolding.sol";
+import "../../interfaces/ITokenHook.sol";
 import "../../lib/BlackholePrevention.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
@@ -16,16 +15,14 @@ contract HPLBase is
     OwnableUpgradeable,
     BlackholePrevention
 {
-    ITransferFee public transferFee;
+    ITokenHook public tokenHook;
     address public stakingRewardTreasury;
-    ILiquidityHolding public liquidityHolder;
     mapping(address => bool) public pancakePairs;
    
     function initialize(
         address _tokenReceiver,
         address _stakingRewardTreasury,
-        address _liquidityHolder,
-        address _transferFee
+        address _tokenHook
     ) public initializer {
         __ERC20_init("HappyLand.Finance", "HPL");
         __Ownable_init();
@@ -33,8 +30,7 @@ contract HPLBase is
         //supply 500M
         _mint(_tokenReceiver, 400 * 1000000 * 10**decimals());
         stakingRewardTreasury = _stakingRewardTreasury;
-        liquidityHolder = ILiquidityHolding(_liquidityHolder);
-        transferFee = ITransferFee(_transferFee);
+        tokenHook = ITokenHook(_tokenHook);
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -42,8 +38,8 @@ contract HPLBase is
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    function setTransferFee(address _addr) external onlyOwner {
-        transferFee = ITransferFee(_addr);
+    function setTokenHook(address _addr) external onlyOwner {
+        tokenHook = ITokenHook(_addr);
     }
 
     function setStakingRewardTreasury(address _stakingRewardTreasury)
@@ -51,13 +47,6 @@ contract HPLBase is
         onlyOwner
     {
         stakingRewardTreasury = _stakingRewardTreasury;
-    }
-
-    function setLiquidityHolding(address _liquidityHolder)
-        external
-        onlyOwner
-    {
-        liquidityHolder = ILiquidityHolding(_liquidityHolder);
     }
 
     function setPancakePairs(address[] memory _pancakePairs, bool val)
@@ -85,8 +74,8 @@ contract HPLBase is
             "ERC20: transfer amount exceeds balance"
         );
 
-        if (!pancakePairs[sender] && address(liquidityHolder) != address(0)) {
-            liquidityHolder.addLiquidity();
+        if (!pancakePairs[sender] && address(tokenHook) != address(0)) {
+            tokenHook.addLiquidity();
         }
 
         unchecked {
@@ -94,15 +83,15 @@ contract HPLBase is
         }
 
         if (
-            address(transferFee) != address(0) &&
-            sender != address(liquidityHolder) &&
-            recipient != address(liquidityHolder)
+            address(tokenHook) != address(0) &&
+            sender != address(tokenHook) &&
+            recipient != address(tokenHook)
         ) {
             (
                 uint256 stakeFee,
                 uint256 liquidityFee,
                 uint256 burnFee
-            ) = transferFee.getTransferFees(sender, recipient, amount);
+            ) = tokenHook.getTransferFees(sender, recipient, amount);
             uint256 burnAmount = (amount * burnFee) / 10000;
             uint256 stakingRewardTreasuryAmount = (amount * stakeFee) / 10000;
             uint256 liquidityHolderAmount = (amount * liquidityFee) / 10000;
@@ -111,13 +100,13 @@ contract HPLBase is
             //treasury
             _balances[stakingRewardTreasury] += stakingRewardTreasuryAmount;
             //liquidityFee
-            _balances[address(liquidityHolder)] += liquidityHolderAmount;
+            _balances[address(tokenHook)] += liquidityHolderAmount;
 
             _balances[recipient] += amount - burnAmount - stakingRewardTreasuryAmount - liquidityHolderAmount;
            
             emit Transfer(sender, address(0), burnAmount);
             emit Transfer(sender, stakingRewardTreasury, stakingRewardTreasuryAmount);
-            emit Transfer(sender, address(liquidityHolder), liquidityHolderAmount);
+            emit Transfer(sender, address(tokenHook), liquidityHolderAmount);
             emit Transfer(sender, recipient, amount - burnAmount - stakingRewardTreasuryAmount - liquidityHolderAmount);
         } else {
             _balances[recipient] += amount;

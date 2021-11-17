@@ -5,13 +5,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../interfaces/IPancakePair.sol";
 import "../../interfaces/IPancakeRouter02.sol";
-import "../../interfaces/ILiquidityHolding.sol";
+import "../../interfaces/ITokenHook.sol";
 import "../../lib/BlackholePrevention.sol";
 
-contract LiquidityHolding is
+contract HPLHook is
     Ownable,
     Initializable,
-    ILiquidityHolding,
+    ITokenHook,
     BlackholePrevention
 {
     using SafeERC20 for IERC20;
@@ -22,6 +22,21 @@ contract LiquidityHolding is
     IPancakeRouter02 public pancakeRouter;
     mapping(address => bool) public liquidityCallers;
     uint256 public minimumToAddLiquidity;
+
+    mapping(address => bool) public zeroFeeList;
+
+    event ZeroFeeList(address _addr, bool val);
+
+    uint256 public stakeRewardFee;
+    uint256 public liquidityFee;
+    uint256 public burnFee;
+
+    constructor() {
+        zeroFeeList[msg.sender] = true;
+        stakeRewardFee = 50;
+        liquidityFee = 50;
+        burnFee = 50;
+    }
 
     function initialize(address _hpl, address _pancakeRouter)
         external
@@ -169,5 +184,43 @@ contract LiquidityHolding is
         uint256 tokenId
     ) external virtual onlyOwner {
         _withdrawERC721(receiver, tokenAddress, tokenId);
+    }
+
+    function setZeroFeeList(address[] memory _addrs, bool _val)
+        external
+        onlyOwner
+    {
+        for (uint256 i = 0; i < _addrs.length; i++) {
+            zeroFeeList[_addrs[i]] = _val;
+            emit ZeroFeeList(_addrs[i], _val);
+        }
+    }
+
+    function setTransferFees(
+        uint256 _stakeRewardFee,
+        uint256 _liquidityFee,
+        uint256 _burnFee
+    ) external onlyOwner {
+        stakeRewardFee = _stakeRewardFee;
+        liquidityFee = _liquidityFee;
+        burnFee = _burnFee;
+    }
+
+    function getTransferFees(
+        address sender,
+        address recipient,
+        uint256 amount
+    )
+        external
+        view
+        override
+        returns (
+            uint256 _stakeRewardFee,
+            uint256 _liquidityFee,
+            uint256 _burnFee
+        )
+    {
+        if (zeroFeeList[sender] || zeroFeeList[recipient]) return (0, 0, 0);
+        return (stakeRewardFee, liquidityFee, burnFee); //0.5%
     }
 }
