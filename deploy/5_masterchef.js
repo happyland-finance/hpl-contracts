@@ -35,10 +35,11 @@ module.exports = async (hre) => {
 
   let hplAddress = require(`../deployments/${chainId}/HPL.json`).address
   let hpwAddress = require(`../deployments/${chainId}/HPW.json`).address
+  let devfundAddress = require(`../deployments/${chainId}/DevFund.json`).address
 
   log("Deploying RewardDistributor...");
   const RewardDistributor = await ethers.getContractFactory("RewardDistributor")
-  const rewardDistributor = await upgrades.deployProxy(RewardDistributor, [constants.getDevRewardAddress(chainId), hplAddress, hpwAddress, 0, 0, ethers.constants.AddressZero], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
+  const rewardDistributor = await upgrades.deployProxy(RewardDistributor, [devfundAddress, hplAddress, hpwAddress, 0, 0, ethers.constants.AddressZero], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
   log("RewardDistributor address : ", rewardDistributor.address);
   deployData['RewardDistributor'] = {
     abi: getContractAbi('RewardDistributor'),
