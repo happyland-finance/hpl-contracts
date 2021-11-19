@@ -1,18 +1,14 @@
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../TokenBurnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../../interfaces/ITokenHook.sol";
 import "../../lib/BlackholePrevention.sol";
+import "../../lib/Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 contract HPWBase is
-    Initializable,
+    Upgradeable,
     TokenBurnableUpgradeable,
-    UUPSUpgradeable,
-    OwnableUpgradeable,
     BlackholePrevention
 {
     ITokenHook public tokenHook;
@@ -22,8 +18,8 @@ contract HPWBase is
     function initialize(
         address _tokenHook
     ) public initializer {
+        initOwner();
         __ERC20_init("HappyLand Reward Token", "HPW");
-        __Ownable_init();
 
         tokenHook = ITokenHook(_tokenHook);
     }
@@ -38,11 +34,6 @@ contract HPWBase is
         require(minters[msg.sender], "Not minter");
         _mint(_to, _amount);
     }
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
-
-    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     function setTokenHook(address _addr) external onlyOwner {
         tokenHook = ITokenHook(_addr);

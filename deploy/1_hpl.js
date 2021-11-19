@@ -37,17 +37,17 @@ module.exports = async (hre) => {
 
   log("Deploying HPLHook...");
   const HPLHook = await ethers.getContractFactory("HPLHook")
-  const HPLHookInstance = await HPLHook.deploy()
-  const hplhook = await HPLHookInstance.deployed()
+  const hplhook = await upgrades.deployProxy(HPLHook, [uniswapRouteAddress], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
   log("HPLHook address : ", hplhook.address);
 
   await hplhook.setZeroFeeList([signers[0].address], true)
 
   log('  Deploying HPL Token...');
   const HPL = await ethers.getContractFactory('HPL');
-  const hpl = await upgrades.deployProxy(HPL, [signers[0].address, _stakingRewardTreasury, hplhook.address], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
-  await hplhook.initialize(hpl.address, uniswapRouteAddress)
+  const hpl = await upgrades.deployProxy(HPL, [signers[0].address, _stakingRewardTreasury, hplhook.address], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 4000000 })
   log('  - HPL:         ', hpl.address);
+
+  await hplhook.setHPL(hpl.address)
 
   //create liqidity pair
   let pairedToken = constants.getPairedToken(chainId)
@@ -55,7 +55,7 @@ module.exports = async (hre) => {
   let factoryAddress = await router.factory()
   let factory = await ethers.getContractAt(PancakeFactoryABI, factoryAddress)
   await factory.createPair(hpl.address, pairedToken)
-  await sleepFor(5000)
+  await sleepFor(15000)
   let pairAddress = await factory.getPair(hpl.address, pairedToken)
   log('Pair', pairAddress)
   await hplhook.setLiquidityPair(pairAddress)

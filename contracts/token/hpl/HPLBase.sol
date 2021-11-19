@@ -1,42 +1,29 @@
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../TokenBurnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../../interfaces/ITokenHook.sol";
 import "../../lib/BlackholePrevention.sol";
+import "../../lib/Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
-contract HPLBase is
-    Initializable,
-    TokenBurnableUpgradeable,
-    UUPSUpgradeable,
-    OwnableUpgradeable,
-    BlackholePrevention
-{
+contract HPLBase is Upgradeable, TokenBurnableUpgradeable, BlackholePrevention {
     ITokenHook public tokenHook;
     address public stakingRewardTreasury;
     mapping(address => bool) public pancakePairs;
-   
+
     function initialize(
         address _tokenReceiver,
         address _stakingRewardTreasury,
         address _tokenHook
     ) public initializer {
+        initOwner();
         __ERC20_init("HappyLand.Finance", "HPL");
-        __Ownable_init();
 
-        //supply 500M
+        //supply 400M
         _mint(_tokenReceiver, 400 * 1000000 * 10**decimals());
         stakingRewardTreasury = _stakingRewardTreasury;
         tokenHook = ITokenHook(_tokenHook);
     }
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
-
-    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     function setTokenHook(address _addr) external onlyOwner {
         tokenHook = ITokenHook(_addr);
@@ -102,17 +89,32 @@ contract HPLBase is
             //liquidityFee
             _balances[address(tokenHook)] += liquidityHolderAmount;
 
-            _balances[recipient] += amount - burnAmount - stakingRewardTreasuryAmount - liquidityHolderAmount;
-           
+            _balances[recipient] +=
+                amount -
+                burnAmount -
+                stakingRewardTreasuryAmount -
+                liquidityHolderAmount;
+
             emit Transfer(sender, address(0), burnAmount);
-            emit Transfer(sender, stakingRewardTreasury, stakingRewardTreasuryAmount);
+            emit Transfer(
+                sender,
+                stakingRewardTreasury,
+                stakingRewardTreasuryAmount
+            );
             emit Transfer(sender, address(tokenHook), liquidityHolderAmount);
-            emit Transfer(sender, recipient, amount - burnAmount - stakingRewardTreasuryAmount - liquidityHolderAmount);
+            emit Transfer(
+                sender,
+                recipient,
+                amount -
+                    burnAmount -
+                    stakingRewardTreasuryAmount -
+                    liquidityHolderAmount
+            );
         } else {
             _balances[recipient] += amount;
-             emit Transfer(sender, recipient, amount);
+            emit Transfer(sender, recipient, amount);
         }
-         _afterTokenTransfer(sender, recipient, amount);
+        _afterTokenTransfer(sender, recipient, amount);
     }
 
     //rescue loss token

@@ -1,5 +1,10 @@
 [
   {
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -37,23 +42,48 @@
       {
         "indexed": false,
         "internalType": "address",
-        "name": "token",
+        "name": "depositor",
         "type": "address"
       },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "lands",
+        "type": "bytes"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "houses",
+        "type": "bytes"
+      }
+    ],
+    "name": "NFTDeposit",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
       {
         "indexed": false,
         "internalType": "address",
-        "name": "user",
+        "name": "withdrawer",
         "type": "address"
       },
       {
         "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
+        "internalType": "bytes",
+        "name": "lands",
+        "type": "bytes"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "houses",
+        "type": "bytes"
       }
     ],
-    "name": "Lock",
+    "name": "NFTWithdraw",
     "type": "event"
   },
   {
@@ -81,42 +111,23 @@
       {
         "indexed": false,
         "internalType": "address",
-        "name": "locker",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "bool",
-        "name": "val",
-        "type": "bool"
-      }
-    ],
-    "name": "SetLocker",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "user",
+        "name": "depositor",
         "type": "address"
       },
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "amount",
+        "name": "hplAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "hpwAmount",
         "type": "uint256"
       }
     ],
-    "name": "Unlock",
+    "name": "TokenDeposit",
     "type": "event"
   },
   {
@@ -135,100 +146,103 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_user",
-        "type": "address"
-      }
-    ],
-    "name": "getLockInfo",
-    "outputs": [
-      {
-        "internalType": "bool[]",
-        "name": "isWithdrawns",
-        "type": "bool[]"
-      },
-      {
-        "internalType": "address[]",
-        "name": "tokens",
-        "type": "address[]"
-      },
-      {
         "internalType": "uint256[]",
-        "name": "unlockableAts",
+        "name": "_lands",
         "type": "uint256[]"
       },
       {
         "internalType": "uint256[]",
-        "name": "amounts",
+        "name": "_houses",
         "type": "uint256[]"
       }
     ],
-    "stateMutability": "view",
+    "name": "depositNFTsToPlay",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [
-      {
-        "internalType": "address",
-        "name": "_addr",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "_indexes",
-        "type": "uint256[]"
-      }
-    ],
-    "name": "getLockInfoByIndexes",
-    "outputs": [
-      {
-        "internalType": "bool[]",
-        "name": "isWithdrawns",
-        "type": "bool[]"
-      },
-      {
-        "internalType": "address[]",
-        "name": "tokens",
-        "type": "address[]"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "unlockableAts",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "amounts",
-        "type": "uint256[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_addr",
-        "type": "address"
-      }
-    ],
-    "name": "getLockInfoLength",
-    "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "_hplAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_hpwAmount",
         "type": "uint256"
       }
     ],
+    "name": "depositTokensToPlay",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "house",
+    "outputs": [
+      {
+        "internalType": "contract IERC721Upgradeable",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "hpl",
+    "outputs": [
+      {
+        "internalType": "contract IERC20Upgradeable",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "hpw",
+    "outputs": [
+      {
+        "internalType": "contract IERC20Upgradeable",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
       {
+        "internalType": "contract IERC20Upgradeable",
+        "name": "_hpl",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IERC20Upgradeable",
+        "name": "_hpw",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IERC721Upgradeable",
+        "name": "_land",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IERC721Upgradeable",
+        "name": "_house",
+        "type": "address"
+      },
+      {
         "internalType": "address",
-        "name": "_locker",
+        "name": "_operator",
         "type": "address"
       }
     ],
@@ -238,86 +252,26 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_token",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_addr",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_lockedTime",
-        "type": "uint256"
-      }
-    ],
-    "name": "lock",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "lockInfo",
+    "inputs": [],
+    "name": "land",
     "outputs": [
       {
-        "internalType": "bool",
-        "name": "isWithdrawn",
-        "type": "bool"
-      },
-      {
-        "internalType": "address",
-        "name": "token",
+        "internalType": "contract IERC721Upgradeable",
+        "name": "",
         "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "unlockableAt",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [
+    "inputs": [],
+    "name": "operator",
+    "outputs": [
       {
         "internalType": "address",
         "name": "",
         "type": "address"
-      }
-    ],
-    "name": "lockers",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -346,17 +300,12 @@
   {
     "inputs": [
       {
-        "internalType": "address[]",
-        "name": "_lockers",
-        "type": "address[]"
-      },
-      {
-        "internalType": "bool",
-        "name": "val",
-        "type": "bool"
+        "internalType": "address",
+        "name": "_op",
+        "type": "address"
       }
     ],
-    "name": "setLockers",
+    "name": "setOperator",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -370,24 +319,6 @@
       }
     ],
     "name": "transferOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_addr",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "index",
-        "type": "uint256"
-      }
-    ],
-    "name": "unlock",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -421,6 +352,73 @@
     "name": "upgradeToAndCall",
     "outputs": [],
     "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "userInfo",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "depositedHPL",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "depositedHPW",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "lastUpdatedAt",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "_lands",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_houses",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_expiredTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "r",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "s",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint8",
+        "name": "v",
+        "type": "uint8"
+      }
+    ],
+    "name": "withdrawNFTs",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ]

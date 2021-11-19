@@ -38,8 +38,7 @@ module.exports = async (hre) => {
 
   log("Deploying RewardDistributor...");
   const RewardDistributor = await ethers.getContractFactory("RewardDistributor")
-  const RewardDistributorInstance = await RewardDistributor.deploy()
-  const rewardDistributor = await RewardDistributorInstance.deployed()
+  const rewardDistributor = await upgrades.deployProxy(RewardDistributor, [constants.getDevRewardAddress(chainId), hplAddress, hpwAddress, 0, 0, ethers.constants.AddressZero], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
   log("RewardDistributor address : ", rewardDistributor.address);
   deployData['RewardDistributor'] = {
     abi: getContractAbi('RewardDistributor'),
@@ -49,8 +48,7 @@ module.exports = async (hre) => {
 
   log("Deploying TokenLock...");
   const TokenLock = await ethers.getContractFactory("TokenLock")
-  const TokenLockInstance = await TokenLock.deploy()
-  const tokenLock = await TokenLockInstance.deployed()
+  const tokenLock = await upgrades.deployProxy(TokenLock, [ethers.constants.AddressZero], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
   log("TokenLock address : ", tokenLock.address);
   deployData['TokenLock'] = {
     abi: getContractAbi('TokenLock'),
@@ -69,10 +67,10 @@ module.exports = async (hre) => {
   }
 
   log("Initializing RewardDistributor...")
-  await rewardDistributor.initialize(constants.getDevRewardAddress(chainId), hplAddress, hpwAddress, 0, 0, masterchef.address)
+  await rewardDistributor.setLockers([masterchef.address], true)
 
   log("Initializing TokenLock...")
-  await tokenLock.initialize(masterchef.address)
+  await tokenLock.setLockers([masterchef.address], true)
 
   log("Adding HPW Minter...")
   const HPW = await ethers.getContractFactory("HPW")

@@ -42,5 +42,9 @@ module.exports = {
             return "0xe9e7cea3dedca5984780bafc599bd69add087d56" //busd on mainnet
         }
         return "0x4fb99590ca95fc3255d9fa66a1ca46c43c34b09a" //banana on bsc testnet
+    },
+    getOperator: function(chainId) {
+        //TODO: change based on chainId
+        return "0xe9e7cea3dedca5984780bafc599bd69add087d56"
     }
 }

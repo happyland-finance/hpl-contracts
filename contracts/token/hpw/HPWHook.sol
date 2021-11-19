@@ -1,21 +1,19 @@
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "../../interfaces/IPancakePair.sol";
 import "../../interfaces/IPancakeRouter02.sol";
 import "../../interfaces/ITokenHook.sol";
 import "../../lib/BlackholePrevention.sol";
+import "../../lib/Upgradeable.sol";
 
 contract HPWHook is
-    Ownable,
-    Initializable,
+    Upgradeable,
     ITokenHook,
     BlackholePrevention
 {
-    using SafeERC20 for IERC20;
-    IERC20 public hpw;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    IERC20Upgradeable public hpw;
     bool public swapAndLiquidifyEnabled;
     bool public inSwapAndLiquify;
     IPancakePair public liquidityPair;
@@ -29,19 +27,17 @@ contract HPWHook is
     uint256 public stakeRewardFee;
     uint256 public liquidityFee;
     uint256 public burnFee;
-    constructor() {
+
+    function initialize(address _pancakeRouter)
+        external
+        initializer
+    {
+        initOwner();
         zeroFeeList[msg.sender] = true;
         stakeRewardFee = 0;
         liquidityFee = 300;
         burnFee = 200;
-    }
 
-    function initialize(address _hpw, address _pancakeRouter)
-        external
-        initializer
-    {
-        hpw = IERC20(_hpw);
-        liquidityCallers[_hpw] = true;
         minimumToAddLiquidity = 200e18;
 
         swapAndLiquidifyEnabled = true;
@@ -50,7 +46,7 @@ contract HPWHook is
     }
 
     function setHPW(address _hpw) external onlyOwner {
-        hpw = IERC20(_hpw);
+        hpw = IERC20Upgradeable(_hpw);
         liquidityCallers[_hpw] = true;
     }
 
@@ -122,7 +118,7 @@ contract HPWHook is
             ? liquidityPair.token1()
             : liquidityPair.token0();
 
-        IERC20(hpw).approve(address(pancakeRouter), tokenAmount);
+        IERC20Upgradeable(hpw).approve(address(pancakeRouter), tokenAmount);
 
         // make the swap
         pancakeRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(
@@ -138,13 +134,13 @@ contract HPWHook is
         address otherToken = liquidityPair.token0() == address(hpw) // huong 
             ? liquidityPair.token1()
             : liquidityPair.token0();
-        uint256 otherTokenAmount = IERC20(otherToken).balanceOf(address(this));
-        IERC20(otherToken).approve(
+        uint256 otherTokenAmount = IERC20Upgradeable(otherToken).balanceOf(address(this));
+        IERC20Upgradeable(otherToken).approve(
             address(pancakeRouter),
             otherTokenAmount
         );
         // approve token transfer to cover all possible scenarios
-        IERC20(hpw).approve(address(pancakeRouter), tokenAmount);
+        IERC20Upgradeable(hpw).approve(address(pancakeRouter), tokenAmount);
 
         // add the liquidity
         pancakeRouter.addLiquidity(

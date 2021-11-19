@@ -36,8 +36,7 @@ module.exports = async (hre) => {
 
   log("Deploying HPWHook...");
   const HPWHook = await ethers.getContractFactory("HPWHook")
-  const HPWHookInstance = await HPWHook.deploy()
-  const hpwhook = await HPWHookInstance.deployed()
+  const hpwhook = await upgrades.deployProxy(HPWHook, [uniswapRouteAddress], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
   log("HPWHook address : ", hpwhook.address);
 
   await hpwhook.setZeroFeeList([signers[0].address], true)
@@ -45,8 +44,8 @@ module.exports = async (hre) => {
   log('  Deploying HPW Token...');
   const HPW = await ethers.getContractFactory('HPW');
   const hpw = await upgrades.deployProxy(HPW, [hpwhook.address], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
-  await hpwhook.initialize(hpw.address, uniswapRouteAddress)
   log('  - HPW:         ', hpw.address);
+  await hpwhook.setHPW(hpw.address)
 
   //create liqidity pair
   let pairedToken = constants.getPairedToken(chainId)
@@ -54,7 +53,7 @@ module.exports = async (hre) => {
   let factoryAddress = await router.factory()
   let factory = await ethers.getContractAt(PancakeFactoryABI, factoryAddress)
   await factory.createPair(hpw.address, pairedToken)
-  await sleepFor(5000)
+  await sleepFor(15000)
   let pairAddress = await factory.getPair(hpw.address, pairedToken)
   log('Pair', pairAddress)
   await hpwhook.setLiquidityPair(pairAddress)

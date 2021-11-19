@@ -2,23 +2,19 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "../interfaces/IHouse.sol";
 import "../interfaces/ILand.sol";
 import "../lib/BlackholePrevention.sol";
+import "../lib/Upgradeable.sol";
 
 contract NFTSale is
-    Initializable,
-    OwnableUpgradeable,
+    Upgradeable,
     PausableUpgradeable,
     ERC721EnumerableUpgradeable,
-    BlackholePrevention,
-    UUPSUpgradeable
+    BlackholePrevention
 {
     using AddressUpgradeable for address payable;
     using SafeMathUpgradeable for uint256;
@@ -38,7 +34,6 @@ contract NFTSale is
         uint256[] landCountForSales; //corresponding rarity
         mapping(uint256 => uint256) landRarityMap; //mapping from rarity to index + 1 in array landCountRarities
         uint256[] currentLandCounts;
-
         uint256[] houseCountRarities;
         uint256[] houseCountForSales; //corresponding rarity
         mapping(uint256 => uint256) houseRarityMap; //mapping from rarity to index + 1 in array houseCountRarities
@@ -89,11 +84,6 @@ contract NFTSale is
         _;
     }
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
-
-    function _authorizeUpgrade(address) internal override onlyOwner {}
-
     function initialize(
         address _house,
         address _land,
@@ -103,7 +93,7 @@ contract NFTSale is
         uint256[] memory _landPricesForRarities,
         address payable _feeTo
     ) external initializer {
-        __Ownable_init();
+        initOwner();
 
         house = IHouse(_house);
         land = ILand(_land);
@@ -190,7 +180,7 @@ contract NFTSale is
         currentSale.currentLandCounts = new uint256[](
             _landCountRarities.length
         );
-        
+
         currentSale.houseCountRarities = _houseCountRarities;
         currentSale.houseCountForSales = _houseCountForSales;
         for (uint256 i = 0; i < _houseCountRarities.length; i++) {
@@ -246,7 +236,12 @@ contract NFTSale is
         transferToFeeTo();
     }
 
-    function buyHouse(uint256 _rarity) public payable whenNotPaused canBuyHouse(_rarity) {
+    function buyHouse(uint256 _rarity)
+        public
+        payable
+        whenNotPaused
+        canBuyHouse(_rarity)
+    {
         require(housePriceMap[_rarity] != 0, "Unsupported rarity");
         require(
             msg.value >= housePriceMap[_rarity],

@@ -6,11 +6,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "../interfaces/IRewardDistributor.sol";
 import "../interfaces/ITokenLock.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "../lib/Upgradeable.sol";
 
 // interface IMigratorChef {
 //     // Perform LP token migration from legacy UniswapV2 to HPL.
@@ -32,11 +30,7 @@ import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 // distributed and the community can show to govern itself.
 //
 // Have fun reading it. Hopefully it's bug-free. God bless.
-contract MasterChef is
-    Initializable,
-    OwnableUpgradeable,
-    UUPSUpgradeable
-{
+contract MasterChef is Upgradeable {
     using SafeMathUpgradeable for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
     // Info of each user.
@@ -103,11 +97,6 @@ contract MasterChef is
         uint256 amount
     );
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
-
-    function _authorizeUpgrade(address) internal override onlyOwner {}
-
     function initialize(
         IERC20Upgradeable _hpl,
         IERC20Upgradeable _hpw,
@@ -117,7 +106,7 @@ contract MasterChef is
         address _rewardDistributor,
         address _tokenLock
     ) external initializer {
-        __Ownable_init();
+        initOwner();
 
         totalAllocPoint = 0;
         allowEmergencyWithdraw = false;

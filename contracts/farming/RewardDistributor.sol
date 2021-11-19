@@ -1,17 +1,20 @@
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "../interfaces/IRewardDistributor.sol";
-import "../lib/BlackholePreventionOwnable.sol";
+import "../lib/BlackholePreventionOwnableUpgradeable.sol";
 import "../interfaces/IMint.sol";
+import "../lib/Upgradeable.sol";
 
-contract RewardDistributor is Initializable, BlackholePreventionOwnable, IRewardDistributor {
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+contract RewardDistributor is
+    Upgradeable,
+    BlackholePreventionOwnableUpgradeable,
+    IRewardDistributor
+{
+    using SafeMathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct VestingInfo {
         uint256 unlockedFrom;
@@ -19,31 +22,40 @@ contract RewardDistributor is Initializable, BlackholePreventionOwnable, IReward
         uint256 releasedAmount;
         uint256 totalAmount;
     }
-    uint256 public hplVestingPeriod = 10 days;
-    uint256 public hpwVestingPeriod = 3 days;
+    uint256 public hplVestingPeriod;
+    uint256 public hpwVestingPeriod;
     mapping(address => uint256) public vestingPeriod;
     address public devAddress; //receive 10% reward
 
-    IERC20 public hpl;
-    IERC20 public hpw;
-    uint256 public totalHPLDistributed = 0;
-    uint256 public totalHPWDistributed = 0;
+    IERC20Upgradeable public hpl;
+    IERC20Upgradeable public hpw;
+    uint256 public totalHPLDistributed;
+    uint256 public totalHPWDistributed;
 
     //user => token => vesting info
-    mapping(address => mapping (address => VestingInfo)) public vestings;
+    mapping(address => mapping(address => VestingInfo)) public vestings;
     mapping(address => bool) public lockers;
 
     event Lock(address token, address user, uint256 amount);
     event Unlock(address token, address user, uint256 amount);
     event SetLocker(address locker, bool val);
 
-    function initialize(address _devAddress, address _hpl, address _hpw, uint256 _hplVesting, uint256 _hpwVesting, address _locker)
-        external
-        initializer
-    {
+    function initialize(
+        address _devAddress,
+        address _hpl,
+        address _hpw,
+        uint256 _hplVesting,
+        uint256 _hpwVesting,
+        address _locker
+    ) external initializer {
+        initOwner();
+
+        hplVestingPeriod = 10 days;
+        hpwVestingPeriod = 3 days;
+
         devAddress = _devAddress;
-        hpl = IERC20(_hpl);
-        hpw = IERC20(_hpw);
+        hpl = IERC20Upgradeable(_hpl);
+        hpw = IERC20Upgradeable(_hpw);
         hplVestingPeriod = _hplVesting > 0 ? _hplVesting : hplVestingPeriod;
         hpwVestingPeriod = _hpwVesting > 0 ? _hpwVesting : hpwVestingPeriod;
         vestingPeriod[_hpl] = hplVestingPeriod;
@@ -55,7 +67,10 @@ contract RewardDistributor is Initializable, BlackholePreventionOwnable, IReward
         devAddress = _devAddress;
     }
 
-    function setVestingPeriod(uint256 _hplVesting, uint256 _hpwVesting) external onlyOwner {
+    function setVestingPeriod(uint256 _hplVesting, uint256 _hpwVesting)
+        external
+        onlyOwner
+    {
         hplVestingPeriod = _hplVesting;
         hpwVestingPeriod = _hpwVesting;
         vestingPeriod[address(hpl)] = hplVestingPeriod;
@@ -75,14 +90,16 @@ contract RewardDistributor is Initializable, BlackholePreventionOwnable, IReward
     function unlock(address _addr) public {
         (uint256 unlockableHPL, uint256 unlockableHPW) = getUnlockable(_addr);
         if (unlockableHPL > 0) {
-            vestings[_addr][address(hpl)].releasedAmount = vestings[_addr][address(hpl)].releasedAmount.add(unlockableHPL);
+            vestings[_addr][address(hpl)].releasedAmount = vestings[_addr][
+                address(hpl)
+            ].releasedAmount.add(unlockableHPL);
             if (unlockableHPL < hpl.balanceOf(address(this))) {
                 hpl.safeTransfer(_addr, unlockableHPL);
             } else {
                 hpl.safeTransfer(_addr, hpl.balanceOf(address(this)));
             }
             emit Unlock(address(hpl), _addr, unlockableHPL);
-            uint256 devReward = unlockableHPL * 10 / 100;
+            uint256 devReward = (unlockableHPL * 10) / 100;
             if (devReward < hpl.balanceOf(address(this))) {
                 hpl.safeTransfer(devAddress, devReward);
             } else {
@@ -91,15 +108,21 @@ contract RewardDistributor is Initializable, BlackholePreventionOwnable, IReward
         }
 
         if (unlockableHPW > 0) {
-            vestings[_addr][address(hpw)].releasedAmount = vestings[_addr][address(hpw)].releasedAmount.add(unlockableHPL);
-            uint256 devReward = unlockableHPW * 10 / 100;
+            vestings[_addr][address(hpw)].releasedAmount = vestings[_addr][
+                address(hpw)
+            ].releasedAmount.add(unlockableHPL);
+            uint256 devReward = (unlockableHPW * 10) / 100;
             IMint(address(hpw)).mint(_addr, unlockableHPW);
             IMint(address(hpw)).mint(devAddress, devReward);
             emit Unlock(address(hpw), _addr, unlockableHPW);
         }
     }
 
-    function distributeReward(address _addr, uint256 _hplAmount, uint256 _hpwAmount) external override {
+    function distributeReward(
+        address _addr,
+        uint256 _hplAmount,
+        uint256 _hpwAmount
+    ) external override {
         //we add this check for avoiding too much vesting
         require(lockers[msg.sender], "only locker can lock");
 
@@ -126,11 +149,22 @@ contract RewardDistributor is Initializable, BlackholePreventionOwnable, IReward
         }
     }
 
-    function getUnlockable(address _addr) public view returns (uint256 _unlockableHPL, uint256 _unlockableHPW) {
-        return (computeUnlockableForVesting(_addr, address(hpl)), computeUnlockableForVesting(_addr, address(hpw)));
+    function getUnlockable(address _addr)
+        public
+        view
+        returns (uint256 _unlockableHPL, uint256 _unlockableHPW)
+    {
+        return (
+            computeUnlockableForVesting(_addr, address(hpl)),
+            computeUnlockableForVesting(_addr, address(hpw))
+        );
     }
 
-    function computeUnlockableForVesting(address _addr, address _token) public view returns (uint256) {
+    function computeUnlockableForVesting(address _addr, address _token)
+        public
+        view
+        returns (uint256)
+    {
         VestingInfo memory vesting = vestings[_addr][_token];
         if (vesting.totalAmount == 0) {
             return 0;
@@ -148,9 +182,22 @@ contract RewardDistributor is Initializable, BlackholePreventionOwnable, IReward
         return releasable.sub(vesting.releasedAmount);
     }
 
-    function getLockedInfo(address _addr) external view returns (uint256 _hplLocked, uint256 _hplReleasable, uint256 _hpwLocked, uint256 _hpwReleasable) {
+    function getLockedInfo(address _addr)
+        external
+        view
+        returns (
+            uint256 _hplLocked,
+            uint256 _hplReleasable,
+            uint256 _hpwLocked,
+            uint256 _hpwReleasable
+        )
+    {
         (_hplReleasable, _hpwReleasable) = getUnlockable(_addr);
-        _hplLocked = vestings[_addr][address(hpl)].totalAmount.sub(vestings[_addr][address(hpl)].releasedAmount);
-        _hpwLocked = vestings[_addr][address(hpw)].totalAmount.sub(vestings[_addr][address(hpw)].releasedAmount);
+        _hplLocked = vestings[_addr][address(hpl)].totalAmount.sub(
+            vestings[_addr][address(hpl)].releasedAmount
+        );
+        _hpwLocked = vestings[_addr][address(hpw)].totalAmount.sub(
+            vestings[_addr][address(hpw)].releasedAmount
+        );
     }
 }

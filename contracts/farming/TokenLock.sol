@@ -1,15 +1,14 @@
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "../interfaces/ITokenLock.sol";
+import "../lib/Upgradeable.sol";
 
-contract TokenLock is Initializable, Ownable, ITokenLock {
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+contract TokenLock is Upgradeable, ITokenLock {
+    using SafeMathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct LockInfo {
         bool isWithdrawn;
@@ -26,6 +25,7 @@ contract TokenLock is Initializable, Ownable, ITokenLock {
     event SetLocker(address locker, bool val);
 
     function initialize(address _locker) external initializer {
+        initOwner();
         lockers[_locker] = true;
         emit SetLocker(_locker, true);
     }
@@ -48,7 +48,7 @@ contract TokenLock is Initializable, Ownable, ITokenLock {
             "Already withdrawn or not unlockable yet"
         );
         _lockInfo[index].isWithdrawn = true;
-        IERC20(_lockInfo[index].token).safeTransfer(
+        IERC20Upgradeable(_lockInfo[index].token).safeTransfer(
             _addr,
             _lockInfo[index].amount
         );
@@ -68,7 +68,11 @@ contract TokenLock is Initializable, Ownable, ITokenLock {
         //we add this check for avoiding too much vesting
         require(lockers[msg.sender], "only locker can lock");
         if (_amount > 0) {
-            IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+            IERC20Upgradeable(_token).safeTransferFrom(
+                msg.sender,
+                address(this),
+                _amount
+            );
 
             lockInfo[_addr].push(
                 LockInfo({
@@ -142,5 +146,5 @@ contract TokenLock is Initializable, Ownable, ITokenLock {
         returns (uint256)
     {
         return lockInfo[_addr].length;
-    }    
+    }
 }
