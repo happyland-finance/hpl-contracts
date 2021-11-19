@@ -257,6 +257,10 @@ contract Market is Upgradeable {
             "cancelTokenSale: sale inactive or already sold"
         );
 
+        if (sale.whitelistedBuyer != address(0)) {
+            require(sale.whitelistedBuyer == msg.sender, "buyToken: invalid whitelisted address to buy");
+        }
+
         sale.isSold = true;
         sale.isActive = false;
 
