@@ -60,6 +60,7 @@ module.exports = async (hre) => {
   log('Pair', pairAddress)
   await hplhook.setLiquidityPair(pairAddress)
   await hpl.setPancakePairs([pairAddress], true)
+  await hplhook.setPancakePairs([pairAddress], true)
 
   deployData['HPL'] = {
     abi: getContractAbi('HPL'),

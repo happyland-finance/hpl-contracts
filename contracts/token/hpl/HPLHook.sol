@@ -25,6 +25,9 @@ contract HPLHook is Upgradeable, ITokenHook, BlackholePrevention {
     uint256 public liquidityFee;
     uint256 public burnFee;
 
+    //we only charge fees for buy/sell on pancake
+    mapping(address => bool) public pancakePairs;
+
     function initialize(address _pancakeRouter)
         external
         initializer
@@ -72,6 +75,12 @@ contract HPLHook is Upgradeable, ITokenHook, BlackholePrevention {
         pancakeRouter = IPancakeRouter02(_pancakeRouter);
     }
 
+    function setPancakePairs(address[] calldata _pairs, bool _val) external onlyOwner {
+        for(uint256 i = 0; i < _pairs.length; i++) {
+            pancakePairs[_pairs[i]] = _val;
+        }
+    }
+
     function setSwapAndLiquidifyEnabled(bool _swapAndLiquidifyEnabled)
         external
         onlyOwner
@@ -87,6 +96,7 @@ contract HPLHook is Upgradeable, ITokenHook, BlackholePrevention {
                     liquidityPair.token1() == address(hpl), // huong
                 "One of paired tokens must be HPL"
             );
+            pancakePairs[_liquidityPair] = true;
         }
     }
 
@@ -210,6 +220,9 @@ contract HPLHook is Upgradeable, ITokenHook, BlackholePrevention {
         )
     {
         if (zeroFeeList[sender] || zeroFeeList[recipient]) return (0, 0, 0);
+        //check if normal transfer between wallets
+        if (!pancakePairs[sender] && !pancakePairs[sender]) return (0, 0, 0);
+
         return (stakeRewardFee, liquidityFee, burnFee); //0.5%
     }
 }
