@@ -221,7 +221,7 @@ contract HPLHook is Upgradeable, ITokenHook, BlackholePrevention {
     {
         if (zeroFeeList[sender] || zeroFeeList[recipient]) return (0, 0, 0);
         //check if normal transfer between wallets
-        if (!pancakePairs[sender] && !pancakePairs[sender]) return (0, 0, 0);
+        if (!pancakePairs[sender] && !pancakePairs[recipient]) return (0, 0, 0);
 
         return (stakeRewardFee, liquidityFee, burnFee); //0.5%
     }
