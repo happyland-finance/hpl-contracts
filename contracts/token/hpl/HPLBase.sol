@@ -11,11 +11,14 @@ contract HPLBase is Upgradeable, TokenBurnableUpgradeable, BlackholePrevention {
     address public stakingRewardTreasury;
     mapping(address => bool) public pancakePairs;
 
+    event SetTokenHook(address caller, address tokenHook);
+    event SetPancakePair(address caller, address pancakePair);
+    event SetStaking(address caller, address stakingAddress);
     function initialize(
         address _tokenReceiver,
         address _stakingRewardTreasury,
         address _tokenHook
-    ) public initializer {
+    ) external initializer {
         initOwner();
         __ERC20_init("HappyLand.Finance", "HPL");
 
@@ -27,21 +30,26 @@ contract HPLBase is Upgradeable, TokenBurnableUpgradeable, BlackholePrevention {
 
     function setTokenHook(address _addr) external onlyOwner {
         tokenHook = ITokenHook(_addr);
+        emit SetTokenHook(msg.sender, _addr);
     }
 
     function setStakingRewardTreasury(address _stakingRewardTreasury)
         external
         onlyOwner
     {
+        require(stakingRewardTreasury != address(0), "null address");
         stakingRewardTreasury = _stakingRewardTreasury;
+        emit SetStaking(msg.sender, _stakingRewardTreasury);
     }
 
-    function setPancakePairs(address[] memory _pancakePairs, bool val)
+    function setPancakePairs(address[] calldata _pancakePairs, bool val)
         external
         onlyOwner
     {
         for (uint256 i = 0; i < _pancakePairs.length; i++) {
+            require(_pancakePairs[i] != address(0), "null address");
             pancakePairs[_pancakePairs[i]] = val;
+            emit SetStaking(msg.sender, _pancakePairs[i]);
         }
     }
 
