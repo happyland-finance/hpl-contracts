@@ -1,10 +1,5 @@
 [
   {
-    "inputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
     "anonymous": false,
     "inputs": [
       {
@@ -111,6 +106,31 @@
       {
         "indexed": false,
         "internalType": "address",
+        "name": "claimer",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "hplAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "hpwAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "RewardsClaimed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
         "name": "depositor",
         "type": "address"
       },
@@ -134,6 +154,31 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "address",
+        "name": "withdrawer",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "hplAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "hpwAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "TokenWithdraw",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": true,
         "internalType": "address",
         "name": "implementation",
@@ -142,6 +187,44 @@
     ],
     "name": "Upgraded",
     "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_hplRewards",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_hpwRewards",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_expiredTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "r",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "s",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint8",
+        "name": "v",
+        "type": "uint8"
+      }
+    ],
+    "name": "claimRewards",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
     "inputs": [
@@ -366,17 +449,27 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "depositedHPL",
+        "name": "hplDeposit",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "depositedHPW",
+        "name": "hpwDeposit",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
         "name": "lastUpdatedAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "hplRewardClaimed",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "hpwRewardClaimed",
         "type": "uint256"
       }
     ],
@@ -417,6 +510,44 @@
       }
     ],
     "name": "withdrawNFTs",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_hplSpent",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_hpwSpent",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_expiredTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "r",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "s",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint8",
+        "name": "v",
+        "type": "uint8"
+      }
+    ],
+    "name": "withdrawTokens",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
