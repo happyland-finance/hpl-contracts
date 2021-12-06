@@ -9,12 +9,13 @@ import "../interfaces/IHouse.sol";
 import "../interfaces/ILand.sol";
 import "../lib/BlackholePrevention.sol";
 import "../lib/Upgradeable.sol";
+import "../lib/SignerRecover.sol";
 
 contract NFTSale is
     Upgradeable,
     PausableUpgradeable,
-    ERC721EnumerableUpgradeable,
-    BlackholePrevention
+    BlackholePrevention,
+    SignerRecover
 {
     using AddressUpgradeable for address payable;
     using SafeMathUpgradeable for uint256;
@@ -22,10 +23,12 @@ contract NFTSale is
     ILand public land;
     IHouse public house;
     address payable public feeTo;
+    address public operator;
 
     //rarity => price
     mapping(uint256 => uint256) public landPriceMap;
     mapping(uint256 => uint256) public housePriceMap;
+    mapping(bytes32 => bool) public claimIds;
 
     struct CurrentSale {
         uint256 startTime;
@@ -43,6 +46,8 @@ contract NFTSale is
 
     event SetHousePrice(uint256 _price, uint256 _rarity, address _setter);
     event SetLandPrice(uint256 _price, uint256 _rarity, address _setter);
+    event ClaimLand(address user, uint256 _rarity, uint256 _amount);
+    event ClaimHouse(address user, uint256 _rarity, uint256 _amount);
 
     modifier canBuyLand(uint256 _rarity) {
         require(
@@ -91,7 +96,8 @@ contract NFTSale is
         uint256[] memory _housePricesForRarities,
         uint256[] memory _supportedLandRarities,
         uint256[] memory _landPricesForRarities,
-        address payable _feeTo
+        address payable _feeTo,
+        address _operator
     ) external initializer {
         initOwner();
 
@@ -101,6 +107,7 @@ contract NFTSale is
 
         setHousePrice(_supportedHouseRarities, _housePricesForRarities);
         setLandPrice(_supportedLandRarities, _landPricesForRarities);
+        operator = _operator;
     }
 
     function setLandPrice(
@@ -141,6 +148,10 @@ contract NFTSale is
 
     function setFeeTo(address payable _feeTo) external onlyOwner {
         feeTo = _feeTo;
+    }
+
+    function setOperator(address _operator) external onlyOwner {
+        operator = _operator;
     }
 
     function setPause(bool _val) external onlyOwner {
@@ -267,6 +278,54 @@ contract NFTSale is
         buyHouse(_rarity);
 
         transferToFeeTo();
+    }
+
+    function claimLand(bytes32 _claimId, uint256 _rarity, uint256 _amount, uint256 _claimFee, uint256 _deadline, bytes32 r, bytes32 s, uint8 v) external payable {
+        require(!claimIds[_claimId], "already claim");
+        require(_deadline >= block.timestamp, "deadline");
+
+        require(msg.value >= _claimFee, "insufficient claim fee");
+
+        bytes32 message = keccak256(
+            abi.encode("claimLand", msg.sender, _claimId, _rarity, _amount, _claimFee, _deadline)
+        );
+
+        require(
+            operator == recoverSigner(r, s, v, message),
+            "Invalid operator"
+        );
+
+        transferToFeeTo();
+
+        for(uint256 i = 0; i < _amount; i++) {
+            land.mint(msg.sender, _rarity);
+        }
+
+        emit ClaimLand(msg.sender, _rarity, _amount);
+    }
+
+    function claimHouse(bytes32 _claimId, uint256 _rarity, uint256 _amount, uint256 _claimFee, uint256 _deadline, bytes32 r, bytes32 s, uint8 v) external payable {
+        require(!claimIds[_claimId], "already claim");
+        require(_deadline >= block.timestamp, "deadline");
+
+        require(msg.value >= _claimFee, "insufficient claim fee");
+
+        bytes32 message = keccak256(
+            abi.encode("claimHouse", msg.sender, _claimId, _rarity, _amount, _claimFee, _deadline)
+        );
+
+        require(
+            operator == recoverSigner(r, s, v, message),
+            "Invalid operator"
+        );
+
+        transferToFeeTo();
+
+        for(uint256 i = 0; i < _amount; i++) {
+            house.mint(msg.sender, _rarity);
+        }
+
+        emit ClaimHouse(msg.sender, _rarity, _amount);
     }
 
     function transferToFeeTo() internal {

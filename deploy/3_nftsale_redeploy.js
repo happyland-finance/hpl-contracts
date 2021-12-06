@@ -30,20 +30,31 @@ module.exports = async (hre) => {
   if (parseInt(chainId) == 31337) return
 
   let landAddress = require(`../deployments/${chainId}/Land.json`).address
-  let wareHouseAddress = require(`../deployments/${chainId}/WareHouse.json`).address
+  let houseAddress = require(`../deployments/${chainId}/House.json`).address
 
   const Land = await ethers.getContractFactory('Land')
   const land = await Land.attach(landAddress)
   log('Land address : ', land.address)
 
-  const WareHouse = await ethers.getContractFactory('WareHouse')
-  const wareHouse = await WareHouse.attach(wareHouseAddress)
-  log('WareHouse address : ', wareHouse.address)
+  const House = await ethers.getContractFactory('House')
+  const house = await House.attach(houseAddress)
+  log('House address : ', house.address)
+
+  log('Initializing NFTSale parameters...')
+  let landSettings = constants.getLandPrices(chainId)
+  let landRarities = landSettings.rarites
+  let landPrices = landSettings.prices
+
+  let houseSettings = constants.getHousePrices(chainId)
+  let houseRarities = houseSettings.rarites
+  let housePrices = houseSettings.prices
+
+  landPrices = landPrices.map(p => ethers.utils.parseEther(p))
+  housePrices = housePrices.map(p => ethers.utils.parseEther(p))
 
   log('Deploying NFTSale...')
   const NFTSale = await ethers.getContractFactory('NFTSale')
-  const NFTSaleInstance = await NFTSale.deploy()
-  const nftSale = await NFTSaleInstance.deployed()
+  const nftSale = await upgrades.deployProxy(NFTSale, [house.address, land.address, houseRarities, housePrices, landRarities, landPrices, constants.getNFTSaleFeeTo(chainId), constants.getOperator(chainId)], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
   log('NFTSale address : ', nftSale.address)
   deployData['NFTSale'] = {
     abi: getContractAbi('NFTSale'),
@@ -54,21 +65,7 @@ module.exports = async (hre) => {
   log('setFactory Land...')
   await land.setFactory(nftSale.address)
   log('setFactory WareHouse...')
-  await wareHouse.setFactory(nftSale.address)
-
-  log('Initializing NFTSale...')
-  let landPrices = constants.getLandPrices(chainId)
-  let rarities = landPrices.rarites
-  let prices = landPrices.prices
-  prices = prices.map(p => ethers.utils.parseEther(p))
-  await nftSale.initialize(
-    wareHouse.address,
-    land.address,
-    ethers.utils.parseEther(constants.getWareHousePrice(chainId)),
-    rarities,
-    prices,
-    constants.getNFTSaleFeeTo(chainId)
-  )
+  await house.setFactory(nftSale.address)
 
   saveDeploymentData(chainId, deployData)
   log('\n  Contract Deployment Data saved to "deployments" directory.')

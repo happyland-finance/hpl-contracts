@@ -64,7 +64,7 @@ module.exports = async (hre) => {
   housePrices = housePrices.map(p => ethers.utils.parseEther(p))
 
   const NFTSale = await ethers.getContractFactory('NFTSale')
-  const nftSale = await upgrades.deployProxy(NFTSale, [house.address, land.address, houseRarities, housePrices, landRarities, landPrices, constants.getNFTSaleFeeTo(chainId)], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
+  const nftSale = await upgrades.deployProxy(NFTSale, [house.address, land.address, houseRarities, housePrices, landRarities, landPrices, constants.getNFTSaleFeeTo(chainId)], constants.getOperator(chainId), { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
   
   log('NFTSale address : ', nftSale.address)
   deployData['NFTSale'] = {
