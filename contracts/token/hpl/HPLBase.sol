@@ -1,12 +1,17 @@
 pragma solidity ^0.8.0;
 
-import "../TokenBurnableUpgradeable.sol";
+import "./__HPL_ERC20Burnable.sol";
 import "../../interfaces/ITokenHook.sol";
 import "../../lib/BlackholePrevention.sol";
-import "../../lib/Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
-contract HPLBase is Upgradeable, TokenBurnableUpgradeable, BlackholePrevention {
+contract HPLBase is
+    Ownable,
+    Initializable,
+    __HPL_ERC20Burnable,
+    BlackholePrevention
+{
     ITokenHook public tokenHook;
     address public stakingRewardTreasury;
     mapping(address => bool) public pancakePairs;
@@ -14,14 +19,14 @@ contract HPLBase is Upgradeable, TokenBurnableUpgradeable, BlackholePrevention {
     event SetTokenHook(address caller, address tokenHook);
     event SetPancakePair(address caller, address pancakePair);
     event SetStaking(address caller, address stakingAddress);
+
+    constructor() __HPL_ERC20("HappyLand.Finance", "HPL") {}
+
     function initialize(
         address _tokenReceiver,
         address _stakingRewardTreasury,
         address _tokenHook
     ) external initializer {
-        initOwner();
-        __ERC20_init("HappyLand.Finance", "HPL");
-
         //supply 400M
         _mint(_tokenReceiver, 400 * 1000000 * 10**decimals());
         stakingRewardTreasury = _stakingRewardTreasury;
