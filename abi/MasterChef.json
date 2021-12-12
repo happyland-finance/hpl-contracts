@@ -374,38 +374,12 @@
   },
   {
     "inputs": [],
-    "name": "hpl",
-    "outputs": [
-      {
-        "internalType": "contract IERC20Upgradeable",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "hplPerBlock",
     "outputs": [
       {
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "hpw",
-    "outputs": [
-      {
-        "internalType": "contract IERC20Upgradeable",
-        "name": "",
-        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -426,16 +400,6 @@
   },
   {
     "inputs": [
-      {
-        "internalType": "contract IERC20Upgradeable",
-        "name": "_hpl",
-        "type": "address"
-      },
-      {
-        "internalType": "contract IERC20Upgradeable",
-        "name": "_hpw",
-        "type": "address"
-      },
       {
         "internalType": "uint256",
         "name": "_hplPerBlock",

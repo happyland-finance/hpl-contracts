@@ -44,8 +44,12 @@ module.exports = async (hre) => {
 
   log('  Deploying HPL Token...');
   const HPL = await ethers.getContractFactory('HPL');
-  const hpl = await upgrades.deployProxy(HPL, [signers[0].address, _stakingRewardTreasury, hplhook.address], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 4000000 })
+  const HPLInstance = await HPL.deploy()
+  const hpl = await HPLInstance.deployed()
   log('  - HPL:         ', hpl.address);
+
+  log('  - HPL initializing         ');
+  await hpl.initialize(signers[0].address, _stakingRewardTreasury, hplhook.address, { gasLimit: 4000000 })
 
   await hplhook.setHPL(hpl.address)
 

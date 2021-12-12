@@ -10,19 +10,6 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "../lib/Upgradeable.sol";
 
-// interface IMigratorChef {
-//     // Perform LP token migration from legacy UniswapV2 to HPL.
-//     // Take the current LP token address and return the new LP token address.
-//     // Migrator should have full access to the caller's LP token.
-//     // Return the new LP token address.
-//     //
-//     // XXX Migrator must have allowance access to UniswapV2 LP tokens.
-//     //  must mint EXACTLY the same amount of  LP tokens or
-//     // else something bad will happen. Traditional UniswapV2 does not
-//     // do that so be careful!
-//     function migrate(IERC20 token) external returns (IERC20);
-// }
-
 // MasterChef is the master of HPL. He can make HPL and he is a fair guy.
 //
 // Note that it's ownable and the owner wields tremendous power. The ownership
@@ -59,8 +46,8 @@ contract MasterChef is Upgradeable {
         uint256 accHPWPerShare; // Accumulated HPLPoint per share, times 1e12. See below.
     }
     // The HPL TOKEN!
-    IERC20Upgradeable public hpl;
-    IERC20Upgradeable public hpw;
+    // IERC20Upgradeable public hpl;
+    // IERC20Upgradeable public hpw;
     IRewardDistributor public rewardDistributor;
     // Dev address.
     // Block number when bonus HPL period ends.
@@ -98,8 +85,6 @@ contract MasterChef is Upgradeable {
     );
 
     function initialize(
-        IERC20Upgradeable _hpl,
-        IERC20Upgradeable _hpw,
         uint256 _hplPerBlock,
         uint256 _hpwPerBlock,
         uint256 _startBlock,
@@ -111,8 +96,6 @@ contract MasterChef is Upgradeable {
         totalAllocPoint = 0;
         allowEmergencyWithdraw = false;
         poolLockedTime = 2 days;
-        hpl = _hpl;
-        hpw = _hpw;
         hplPerBlock = _hplPerBlock;
         hpwPerBlock = _hpwPerBlock;
         startBlock = _startBlock > 0 ? _startBlock : block.number;
@@ -196,23 +179,6 @@ contract MasterChef is Upgradeable {
         );
         poolInfo[_pid].allocPoint = _allocPoint;
     }
-
-    // // Set the migrator contract. Can only be called by the owner.
-    // function setMigrator(IMigratorChef _migrator) public onlyOwner {
-    //     migrator = _migrator;
-    // }
-
-    // // Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
-    // function migrate(uint256 _pid) public {
-    //     require(address(migrator) != address(0), "migrate: no migrator");
-    //     PoolInfo storage pool = poolInfo[_pid];
-    //     IERC20 lpToken = pool.lpToken;
-    //     uint256 bal = lpToken.balanceOf(address(this));
-    //     lpToken.safeApprove(address(migrator), bal);
-    //     IERC20 newLpToken = migrator.migrate(lpToken);
-    //     require(bal == newLpToken.balanceOf(address(this)), "migrate: bad");
-    //     pool.lpToken = newLpToken;
-    // }
 
     // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _from, uint256 _to)

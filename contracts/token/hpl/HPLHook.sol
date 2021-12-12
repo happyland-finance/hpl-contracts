@@ -36,7 +36,7 @@ contract HPLHook is Upgradeable, ITokenHook, BlackholePrevention {
 
         zeroFeeList[msg.sender] = true;
         stakeRewardFee = 50;
-        liquidityFee = 50;
+        liquidityFee = 100;
         burnFee = 50;
 
         minimumToAddLiquidity = 200e18;

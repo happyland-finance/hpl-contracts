@@ -36,6 +36,8 @@ contract RewardDistributor is
     mapping(address => mapping(address => VestingInfo)) public vestings;
     mapping(address => bool) public lockers;
 
+    bool public enableVesting;
+
     event Lock(address token, address user, uint256 amount);
     event Unlock(address token, address user, uint256 amount);
     event SetLocker(address locker, bool val);
@@ -53,6 +55,8 @@ contract RewardDistributor is
         hplVestingPeriod = 10 days;
         hpwVestingPeriod = 3 days;
 
+        enableVesting = false;
+
         devAddress = _devAddress;
         hpl = IERC20Upgradeable(_hpl);
         hpw = IERC20Upgradeable(_hpw);
@@ -61,6 +65,10 @@ contract RewardDistributor is
         vestingPeriod[_hpl] = hplVestingPeriod;
         vestingPeriod[_hpw] = hpwVestingPeriod;
         lockers[_locker] = true;
+    }
+
+    function setEnableVestingReward(bool _val) external onlyOwner {
+        enableVesting = _val;
     }
 
     function setDevAddress(address _devAddress) external onlyOwner {
@@ -127,6 +135,30 @@ contract RewardDistributor is
         require(lockers[msg.sender], "only locker can lock");
 
         unlock(_addr);
+
+        if (!enableVesting) {
+            //pay reward immediately
+            if (_hplAmount > 0) {
+                if (_hplAmount < hpl.balanceOf(address(this))) {
+                    hpl.safeTransfer(_addr, _hplAmount);
+                } else {
+                    hpl.safeTransfer(_addr, hpl.balanceOf(address(this)));
+                }
+                uint256 devReward = (_hplAmount * 10) / 100;
+                if (devReward < hpl.balanceOf(address(this))) {
+                    hpl.safeTransfer(devAddress, devReward);
+                } else {
+                    hpl.safeTransfer(devAddress, hpl.balanceOf(address(this)));
+                }
+            }
+
+            if (_hpwAmount > 0) {
+                uint256 devReward = (_hpwAmount * 10) / 100;
+                IMint(address(hpw)).mint(_addr, _hpwAmount);
+                IMint(address(hpw)).mint(devAddress, devReward);
+            }
+            return;
+        }
 
         if (_hplAmount > 0) {
             totalHPLDistributed += _hplAmount;
