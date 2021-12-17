@@ -1,37 +1,31 @@
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "../interfaces/ILand.sol";
 import "../lib/BlackholePrevention.sol";
-import "../lib/Upgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 contract Land is
-    Upgradeable,
-    ERC721EnumerableUpgradeable,
+    Ownable,
+    ERC721Enumerable,
     ILand,
-    BlackholePrevention
+    BlackholePrevention,
+    Initializable
 {
-    using SafeMathUpgradeable for uint256;
-    using StringsUpgradeable for uint256;
-
-    uint256 public currentId;
+    using SafeMath for uint256;
+    using Strings for uint256;
 
     string public baseURI;
     mapping(uint256 => string) public tokenURIs;
 
     mapping(address => uint256) public latestTokenMinted;
-    mapping(uint256 => uint256) public tokenRarityMapping;
     address public factory;
 
-    function initialize(address _nftFactory) external initializer {
-        initOwner();
-        __ERC721_init("HappyLand Land NFT", "HLandNFT");
-        currentId = 0;
-        factory = _nftFactory;
-    }
+    constructor() ERC721("HappyLand Land NFT", "HLandNFT") {}
 
     function setBaseURI(string memory _b) external onlyOwner {
         baseURI = _b;
@@ -89,18 +83,15 @@ contract Land is
     }
 
     //client compute result index off-chain, the function will verify it
-    function mint(address _recipient, uint256 _rarity)
+    function mint(address _recipient, uint256 _tokenId)
         external
         override
         onlyFactory
-        returns (uint256 _tokenId)
+        returns (uint256 tokenId)
     {
-        currentId = currentId.add(1);
-        uint256 tokenId = currentId;
-        require(tokenRarityMapping[tokenId] == 0, "Token already exists");
+        tokenId = _tokenId;
 
         _mint(_recipient, tokenId);
-        tokenRarityMapping[tokenId] = _rarity;
         latestTokenMinted[_recipient] = tokenId;
         return tokenId;
     }

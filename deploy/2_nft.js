@@ -31,7 +31,8 @@ module.exports = async (hre) => {
 
   log('Deploying Land...')
   const Land = await ethers.getContractFactory('Land')
-  const land = await upgrades.deployProxy(Land, [ethers.constants.AddressZero], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
+  const LandInstance = await Land.deploy()
+  const land = await LandInstance.deployed()
 
   log('Land address : ', land.address)
   deployData['Land'] = {
@@ -40,48 +41,10 @@ module.exports = async (hre) => {
     deployTransaction: land.deployTransaction,
   }
 
-  log('Deploying House...')
-  const House = await ethers.getContractFactory('House')
-  const house = await upgrades.deployProxy(House, [ethers.constants.AddressZero], { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
-  log('House address : ', house.address)
-  deployData['House'] = {
-    abi: getContractAbi('House'),
-    address: house.address,
-    deployTransaction: house.deployTransaction,
-  }
-
-  log('Deploying NFTSale...')
-
-  let landSettings = constants.getLandPrices(chainId)
-  let landRarities = landSettings.rarites
-  let landPrices = landSettings.prices
-
-  let houseSettings = constants.getHousePrices(chainId)
-  let houseRarities = houseSettings.rarites
-  let housePrices = houseSettings.prices
-
-  landPrices = landPrices.map(p => ethers.utils.parseEther(p))
-  housePrices = housePrices.map(p => ethers.utils.parseEther(p))
-
-  const NFTSale = await ethers.getContractFactory('NFTSale')
-  const nftSale = await upgrades.deployProxy(NFTSale, [house.address, land.address, houseRarities, housePrices, landRarities, landPrices, constants.getNFTSaleFeeTo(chainId)], constants.getOperator(chainId), { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 })
-  
-  log('NFTSale address : ', nftSale.address)
-  deployData['NFTSale'] = {
-    abi: getContractAbi('NFTSale'),
-    address: nftSale.address,
-    deployTransaction: nftSale.deployTransaction,
-  }
-
-  log('Setting factory for Land...')
-  await land.setFactory(nftSale.address)
-  log('Setting factory for House...')
-  await house.setFactory(nftSale.address)
-
   saveDeploymentData(chainId, deployData)
   log('\n  Contract Deployment Data saved to "deployments" directory.')
 
   log('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n')
 }
 
-module.exports.tags = ['nft']
+module.exports.tags = ['land']

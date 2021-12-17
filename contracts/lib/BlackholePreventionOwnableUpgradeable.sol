@@ -1,9 +1,12 @@
 pragma solidity ^0.8.0;
 
-import "./BlackholePrevention.sol";
+import "./BlackholePreventionUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract BlackholePreventionOwnableUpgradeable is BlackholePrevention, OwnableUpgradeable {
+contract BlackholePreventionOwnableUpgradeable is
+    BlackholePreventionUpgradeable,
+    OwnableUpgradeable
+{
     function withdrawEther(address payable receiver, uint256 amount)
         external
         virtual

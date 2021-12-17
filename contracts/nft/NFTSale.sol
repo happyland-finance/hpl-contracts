@@ -5,145 +5,44 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import "../interfaces/IHouse.sol";
 import "../interfaces/ILand.sol";
-import "../lib/BlackholePrevention.sol";
+import "../lib/BlackholePreventionUpgradeable.sol";
 import "../lib/Upgradeable.sol";
 import "../lib/SignerRecover.sol";
 
 contract NFTSale is
     Upgradeable,
     PausableUpgradeable,
-    BlackholePrevention,
+    BlackholePreventionUpgradeable,
     SignerRecover
 {
     using AddressUpgradeable for address payable;
     using SafeMathUpgradeable for uint256;
 
     ILand public land;
-    IHouse public house;
     address payable public feeTo;
     address public operator;
 
     //rarity => price
-    mapping(uint256 => uint256) public landPriceMap;
-    mapping(uint256 => uint256) public housePriceMap;
     mapping(bytes32 => bool) public claimIds;
-
-    struct CurrentSale {
-        uint256 startTime;
-        uint256 endTime;
-        uint256[] landCountRarities;
-        uint256[] landCountForSales; //corresponding rarity
-        mapping(uint256 => uint256) landRarityMap; //mapping from rarity to index + 1 in array landCountRarities
-        uint256[] currentLandCounts;
-        uint256[] houseCountRarities;
-        uint256[] houseCountForSales; //corresponding rarity
-        mapping(uint256 => uint256) houseRarityMap; //mapping from rarity to index + 1 in array houseCountRarities
-        uint256[] currentHouseCounts;
-    }
-    CurrentSale public currentSale;
-
-    event SetHousePrice(uint256 _price, uint256 _rarity, address _setter);
-    event SetLandPrice(uint256 _price, uint256 _rarity, address _setter);
-    event ClaimLand(address user, uint256 _rarity, uint256 _amount);
-    event ClaimHouse(address user, uint256 _rarity, uint256 _amount);
-
-    modifier canBuyLand(uint256 _rarity) {
-        require(
-            currentSale.startTime <= block.timestamp &&
-                block.timestamp <= currentSale.endTime,
-            "Time expired"
-        );
-        uint256 rarityIndex = currentSale.landRarityMap[_rarity];
-        require(
-            rarityIndex > 0 &&
-                rarityIndex <= currentSale.landCountRarities.length,
-            "invalid rarity"
-        );
-        require(
-            currentSale.landCountForSales[rarityIndex - 1] >
-                currentSale.currentLandCounts[rarityIndex - 1],
-            "land sold out"
-        );
-        _;
-    }
-
-    modifier canBuyHouse(uint256 _rarity) {
-        require(
-            currentSale.startTime <= block.timestamp &&
-                block.timestamp <= currentSale.endTime,
-            "Time expired"
-        );
-        uint256 rarityIndex = currentSale.houseRarityMap[_rarity];
-        require(
-            rarityIndex > 0 &&
-                rarityIndex <= currentSale.houseCountRarities.length,
-            "invalid rarity"
-        );
-        require(
-            currentSale.houseCountForSales[rarityIndex - 1] >
-                currentSale.currentHouseCounts[rarityIndex - 1],
-            "house sold out"
-        );
-        _;
-    }
+    event ClaimLand(
+        address user,
+        uint256 _tokenId,
+        uint256 _rarity,
+        uint256 _claimFee
+    );
 
     function initialize(
-        address _house,
         address _land,
-        uint256[] memory _supportedHouseRarities,
-        uint256[] memory _housePricesForRarities,
-        uint256[] memory _supportedLandRarities,
-        uint256[] memory _landPricesForRarities,
         address payable _feeTo,
         address _operator
     ) external initializer {
         initOwner();
 
-        house = IHouse(_house);
         land = ILand(_land);
         feeTo = _feeTo;
 
-        setHousePrice(_supportedHouseRarities, _housePricesForRarities);
-        setLandPrice(_supportedLandRarities, _landPricesForRarities);
         operator = _operator;
-    }
-
-    function setLandPrice(
-        uint256[] memory _supportedRarities,
-        uint256[] memory _landPricesForRarities
-    ) public onlyOwner {
-        require(
-            _supportedRarities.length == _landPricesForRarities.length,
-            "setLandPrice: Invalid input parameter length"
-        );
-        for (uint256 i = 0; i < _supportedRarities.length; i++) {
-            landPriceMap[_supportedRarities[i]] = _landPricesForRarities[i];
-            emit SetLandPrice(
-                _landPricesForRarities[i],
-                _supportedRarities[i],
-                msg.sender
-            );
-        }
-    }
-
-    function setHousePrice(
-        uint256[] memory _supportedRarities,
-        uint256[] memory _housePricesForRarities
-    ) public onlyOwner {
-        require(
-            _supportedRarities.length == _housePricesForRarities.length,
-            "setHousePrice: Invalid input parameter length"
-        );
-        for (uint256 i = 0; i < _supportedRarities.length; i++) {
-            housePriceMap[_supportedRarities[i]] = _housePricesForRarities[i];
-            emit SetHousePrice(
-                _housePricesForRarities[i],
-                _supportedRarities[i],
-                msg.sender
-            );
-        }
     }
 
     function setFeeTo(address payable _feeTo) external onlyOwner {
@@ -162,132 +61,32 @@ contract NFTSale is
         }
     }
 
-    function setNewSale(
-        uint256 _startTime,
-        uint256 _duration,
-        uint256[] memory _landCountRarities,
-        uint256[] memory _landCountForSales,
-        uint256[] memory _houseCountRarities,
-        uint256[] memory _houseCountForSales
-    ) external onlyOwner {
-        require(
-            _landCountRarities.length == _landCountForSales.length,
-            "setNewSale: land Invalid input length"
-        );
-        require(
-            _houseCountRarities.length == _houseCountForSales.length,
-            "setNewSale: house Invalid input length"
-        );
-        currentSale.startTime = _startTime > block.timestamp
-            ? _startTime
-            : block.timestamp;
-        currentSale.endTime = currentSale.startTime.add(_duration);
-
-        currentSale.landCountRarities = _landCountRarities;
-        currentSale.landCountForSales = _landCountForSales;
-        for (uint256 i = 0; i < _landCountRarities.length; i++) {
-            currentSale.landRarityMap[_landCountRarities[i]] = i + 1; // + 1 to avoid 0 by default
-        }
-        currentSale.currentLandCounts = new uint256[](
-            _landCountRarities.length
-        );
-
-        currentSale.houseCountRarities = _houseCountRarities;
-        currentSale.houseCountForSales = _houseCountForSales;
-        for (uint256 i = 0; i < _houseCountRarities.length; i++) {
-            currentSale.houseRarityMap[_houseCountRarities[i]] = i + 1; // + 1 to avoid 0 by default
-        }
-        currentSale.currentHouseCounts = new uint256[](
-            _houseCountRarities.length
-        );
-    }
-
-    function updateCurrentSale(
-        uint256 _startTime,
-        uint256 _duration,
-        uint256[] memory _landCountRarities,
-        uint256[] memory _landCountForSales,
-        uint256[] memory _houseCountRarities,
-        uint256[] memory _houseCountForSales
-    ) external onlyOwner {
-        currentSale.startTime = _startTime;
-        currentSale.endTime = currentSale.startTime.add(_duration);
-
-        currentSale.landCountRarities = _landCountRarities;
-        currentSale.landCountForSales = _landCountForSales;
-        for (uint256 i = 0; i < _landCountRarities.length; i++) {
-            currentSale.landRarityMap[_landCountRarities[i]] = i;
-        }
-
-        currentSale.houseCountRarities = _houseCountRarities;
-        currentSale.houseCountForSales = _houseCountForSales;
-        for (uint256 i = 0; i < _houseCountRarities.length; i++) {
-            currentSale.houseRarityMap[_houseCountRarities[i]] = i + 1; // + 1 to avoid 0 by default
-        }
-    }
-
-    function buyLand(uint256 _rarity)
-        public
-        payable
-        whenNotPaused
-        canBuyLand(_rarity)
-    {
-        require(landPriceMap[_rarity] != 0, "Unsupported rarity");
-        require(
-            msg.value >= landPriceMap[_rarity],
-            "buyLand:: Payment not enough"
-        );
-
-        land.mint(msg.sender, _rarity);
-
-        //update land count
-        uint256 rarityIndex = currentSale.landRarityMap[_rarity];
-        currentSale.currentLandCounts[rarityIndex]++;
-
-        transferToFeeTo();
-    }
-
-    function buyHouse(uint256 _rarity)
-        public
-        payable
-        whenNotPaused
-        canBuyHouse(_rarity)
-    {
-        require(housePriceMap[_rarity] != 0, "Unsupported rarity");
-        require(
-            msg.value >= housePriceMap[_rarity],
-            "buyHouse:: Payment not enough"
-        );
-
-        house.mint(msg.sender, _rarity);
-
-        //update land count
-        uint256 rarityIndex = currentSale.houseRarityMap[_rarity];
-        currentSale.currentHouseCounts[rarityIndex]++;
-
-        transferToFeeTo();
-    }
-
-    function buyCombo(uint256 _rarity) external payable whenNotPaused {
-        require(
-            msg.value >= landPriceMap[_rarity] + housePriceMap[_rarity],
-            "buyCombo:: Payment not enough"
-        );
-
-        buyLand(_rarity);
-        buyHouse(_rarity);
-
-        transferToFeeTo();
-    }
-
-    function claimLand(bytes32 _claimId, uint256 _rarity, uint256 _amount, uint256 _claimFee, uint256 _deadline, bytes32 r, bytes32 s, uint8 v) external payable {
+    function claimLand(
+        bytes32 _claimId,
+        uint256 _tokenId,
+        uint256 _rarity,
+        uint256 _claimFee,
+        uint256 _deadline,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    ) external payable {
         require(!claimIds[_claimId], "already claim");
+        claimIds[_claimId] = true;
         require(_deadline >= block.timestamp, "deadline");
 
         require(msg.value >= _claimFee, "insufficient claim fee");
 
         bytes32 message = keccak256(
-            abi.encode("claimLand", msg.sender, _claimId, _rarity, _amount, _claimFee, _deadline)
+            abi.encode(
+                "claimLand",
+                msg.sender,
+                _claimId,
+                _tokenId,
+                _rarity,
+                _claimFee,
+                _deadline
+            )
         );
 
         require(
@@ -297,67 +96,15 @@ contract NFTSale is
 
         transferToFeeTo();
 
-        for(uint256 i = 0; i < _amount; i++) {
-            land.mint(msg.sender, _rarity);
-        }
+        land.mint(msg.sender, _tokenId);
 
-        emit ClaimLand(msg.sender, _rarity, _amount);
-    }
-
-    function claimHouse(bytes32 _claimId, uint256 _rarity, uint256 _amount, uint256 _claimFee, uint256 _deadline, bytes32 r, bytes32 s, uint8 v) external payable {
-        require(!claimIds[_claimId], "already claim");
-        require(_deadline >= block.timestamp, "deadline");
-
-        require(msg.value >= _claimFee, "insufficient claim fee");
-
-        bytes32 message = keccak256(
-            abi.encode("claimHouse", msg.sender, _claimId, _rarity, _amount, _claimFee, _deadline)
-        );
-
-        require(
-            operator == recoverSigner(r, s, v, message),
-            "Invalid operator"
-        );
-
-        transferToFeeTo();
-
-        for(uint256 i = 0; i < _amount; i++) {
-            house.mint(msg.sender, _rarity);
-        }
-
-        emit ClaimHouse(msg.sender, _rarity, _amount);
+        emit ClaimLand(msg.sender, _tokenId, _rarity, _claimFee);
     }
 
     function transferToFeeTo() internal {
         if (address(this).balance > 0) {
             feeTo.sendValue(address(this).balance);
         }
-    }
-
-    function getCurrentSaleInfo()
-        external
-        view
-        returns (
-            uint256 startTime,
-            uint256 endTime,
-            uint256[] memory landCountRarities,
-            uint256[] memory landCountForSales,
-            uint256[] memory currentLandCounts,
-            uint256[] memory houseCountRarities,
-            uint256[] memory houseCountForSales,
-            uint256[] memory currentHouseCounts
-        )
-    {
-        return (
-            currentSale.startTime,
-            currentSale.endTime,
-            currentSale.landCountRarities,
-            currentSale.landCountForSales,
-            currentSale.currentLandCounts,
-            currentSale.houseCountRarities,
-            currentSale.houseCountForSales,
-            currentSale.currentHouseCounts
-        );
     }
 
     function withdrawEther(address payable receiver, uint256 amount)

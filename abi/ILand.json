@@ -8,7 +8,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "_rarity",
+        "name": "_tokenId",
         "type": "uint256"
       }
     ],
@@ -16,7 +16,7 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "_tokenId",
+        "name": "tokenId",
         "type": "uint256"
       }
     ],
