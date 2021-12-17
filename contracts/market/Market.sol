@@ -14,10 +14,9 @@ contract Market is Upgradeable {
     address public constant NATIVE_TOKEN =
         0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF;
 
-    IERC721Upgradeable public land;
-    IERC721Upgradeable public house;
     address[] public supportedPaymentTokenList;
-    uint256 public feePercentX10 = 10; //default 1%
+    mapping(address => bool) public supportedPaymentMapping;
+    uint256 public feePercentX10; //default 1%
     address payable public feeReceiver;
 
     struct SaleInfo {
@@ -30,10 +29,14 @@ contract Market is Upgradeable {
         uint256 saleId;
         address paymentToken;
         address whitelistedBuyer;
+        address nft;
     }
+    address[] public supportedNFTList;
+    mapping(address => bool) public supportedNFTMapping;
 
-    SaleInfo[] public landSaleList;
-    SaleInfo[] public houseSaleList;
+    SaleInfo[] public saleList;
+
+    event NFTSupported(address nft, bool val);
 
     event NewTokenSale(
         address owner,
@@ -51,7 +54,8 @@ contract Market is Upgradeable {
         uint256 updatedAt,
         uint256 tokenId,
         uint256 price,
-        uint256 saleId
+        uint256 saleId,
+        address whitelistedBuyer
     );
     event SaleCancelled(
         address owner,
@@ -72,44 +76,50 @@ contract Market is Upgradeable {
         address paymentToken
     );
 
-    modifier onlySaleOwner(bool _isLand, uint256 _saleId) {
-        if (_isLand) {
-            require(
-                msg.sender == landSaleList[_saleId].owner,
-                "Invalid land sale owner"
-            );
-        } else {
-            require(
-                msg.sender == houseSaleList[_saleId].owner,
-                "Invalid house sale owner"
-            );
-        }
+    modifier onlySaleOwner(uint256 _saleId) {
+        require(msg.sender == saleList[_saleId].owner, "Invalid sale owner");
         _;
     }
 
     modifier onlySupportedPaymentToken(address _token) {
-        bool found = false;
-        for (uint256 i = 0; i < supportedPaymentTokenList.length; i++) {
-            if (supportedPaymentTokenList[i] == _token) {
-                found = true;
-                break;
-            }
-        }
-        require(found, "unsupported payment token");
+        require(supportedPaymentMapping[_token], "unsupported payment token");
         _;
+    }
+
+    modifier onlySupportedNFT(address _nft) {
+        require(supportedNFTMapping[_nft], "not supported nft");
+        _;
+    }
+
+    function setSupportedNFTs(address[] memory _nfts) external onlyOwner {
+        _setSupportedNFTs(_nfts);
+    }
+
+    function _setSupportedNFTs(address[] memory _nfts) private {
+        //diminish the current list
+        for (uint256 i = 0; i < supportedNFTList.length; i++) {
+            supportedNFTMapping[supportedNFTList[i]] = false;
+            emit NFTSupported(supportedNFTList[i], false);
+        }
+        supportedNFTList = _nfts;
+        for (uint256 i = 0; i < supportedNFTList.length; i++) {
+            supportedNFTMapping[supportedNFTList[i]] = true;
+            emit NFTSupported(_nfts[i], true);
+        }
     }
 
     function initialize(
         address _land,
-        address _house,
         address[] memory _supportedPaymentTokens,
         address payable _feeReceiver
     ) external initializer {
         initOwner();
-        land = IERC721Upgradeable(_land);
-        house = IERC721Upgradeable(_house);
-        supportedPaymentTokenList = _supportedPaymentTokens;
+        address[] memory _lands = new address[](1);
+        _lands[0] = _land;
+        _setSupportedNFTs(_lands);
+        _changePaymentList(_supportedPaymentTokens);
         feeReceiver = _feeReceiver;
+        feePercentX10 = 40;
     }
 
     function changeFee(uint256 _newFee) external onlyOwner {
@@ -117,11 +127,14 @@ contract Market is Upgradeable {
         feePercentX10 = _newFee;
     }
 
-    function changeFeeReceiver(address payable _newFeeReceiver) external onlyOwner {
+    function changeFeeReceiver(address payable _newFeeReceiver)
+        external
+        onlyOwner
+    {
         require(
             _newFeeReceiver != payable(0),
             "changeFeeReceiver: null address"
-        ); //max 10%
+        );
         feeReceiver = _newFeeReceiver;
     }
 
@@ -129,7 +142,20 @@ contract Market is Upgradeable {
         external
         onlyOwner
     {
+        _changePaymentList(_supportedPaymentTokens);
+    }
+
+    function _changePaymentList(address[] memory _supportedPaymentTokens)
+        private
+    {
+        //reset current list
+        for (uint256 i = 0; i < supportedPaymentTokenList.length; i++) {
+            supportedPaymentMapping[supportedPaymentTokenList[i]] = false;
+        }
         supportedPaymentTokenList = _supportedPaymentTokens;
+        for (uint256 i = 0; i < supportedPaymentTokenList.length; i++) {
+            supportedPaymentMapping[supportedPaymentTokenList[i]] = true;
+        }
     }
 
     function isNative(address _token) public pure returns (bool) {
@@ -137,110 +163,96 @@ contract Market is Upgradeable {
     }
 
     function setTokenSale(
-        bool _isLand,
+        address _nft,
         uint256 _tokenId,
         address _paymentToken,
         uint256 _price,
         address _whitelistedBuyer
-    ) external onlySupportedPaymentToken(_paymentToken) {
+    ) external onlySupportedNFT(_nft) onlySupportedPaymentToken(_paymentToken) {
         require(_price > 0, "price must not be 0");
         //transfer token from sender to contract
-        if (_isLand) {
-            land.transferFrom(msg.sender, address(this), _tokenId);
-        } else {
-            house.transferFrom(msg.sender, address(this), _tokenId);
-        }
-        //create a sale
-        if (_isLand) {
-            landSaleList.push(
-                SaleInfo(
-                    false,
-                    true,
-                    payable(msg.sender),
-                    block.timestamp,
-                    _tokenId,
-                    _price,
-                    landSaleList.length,
-                    _paymentToken,
-                    _whitelistedBuyer
-                )
-            );
-        } else {
-            houseSaleList.push(
-                SaleInfo(
-                    false,
-                    true,
-                    payable(msg.sender),
-                    block.timestamp,
-                    _tokenId,
-                    _price,
-                    houseSaleList.length,
-                    _paymentToken,
-                    _whitelistedBuyer
-                )
-            );
-        }
+        IERC721Upgradeable(_nft).transferFrom(
+            msg.sender,
+            address(this),
+            _tokenId
+        );
+
+        saleList.push(
+            SaleInfo(
+                false,
+                true,
+                payable(msg.sender),
+                block.timestamp,
+                _tokenId,
+                _price,
+                saleList.length,
+                _paymentToken,
+                _whitelistedBuyer,
+                _nft
+            )
+        );
 
         emit NewTokenSale(
             msg.sender,
-            _isLand ? address(land) : address(house),
+            _nft,
             block.timestamp,
             _tokenId,
             _price,
-            _isLand ? landSaleList.length - 1 : houseSaleList.length - 1,
+            saleList.length - 1,
             _paymentToken,
             _whitelistedBuyer
         );
     }
 
-    function changeTokenSalePrice(
-        bool _isLand,
+    function updateSaleInfo(
+        address _nft,
         uint256 _saleId,
-        uint256 _newPrice
-    ) external onlySaleOwner(_isLand, _saleId) {
+        uint256 _newPrice,
+        address _whitelistedBuyer
+    ) external onlySaleOwner(_saleId) {
         require(_newPrice > 0, "price must not be 0");
-        SaleInfo storage sale = _isLand
-            ? landSaleList[_saleId]
-            : houseSaleList[_saleId];
+        SaleInfo storage sale = saleList[_saleId];
         require(
             sale.isActive && !sale.isSold,
-            "changeTokenSalePrice: sale inactive or already sold"
+            "updateSaleInfo: sale inactive or already sold"
         );
         sale.price = _newPrice;
         sale.lastUpdated = block.timestamp;
+        sale.whitelistedBuyer = _whitelistedBuyer;
 
         emit TokenSaleUpdated(
             msg.sender,
-            _isLand ? address(land) : address(house),
+            _nft,
             block.timestamp,
             sale.tokenId,
             _newPrice,
-            _saleId
+            _saleId,
+            _whitelistedBuyer
         );
     }
 
-    function cancelTokenSale(bool _isLand, uint256 _saleId)
+    function cancelTokenSale(address _nft, uint256 _saleId)
         external
-        onlySaleOwner(_isLand, _saleId)
+        onlySaleOwner(_saleId)
     {
-        SaleInfo storage sale = _isLand
-            ? landSaleList[_saleId]
-            : houseSaleList[_saleId];
+        SaleInfo storage sale = saleList[_saleId];
         require(
             sale.isActive && !sale.isSold,
             "cancelTokenSale: sale inactive or already sold"
         );
+        require(sale.nft == _nft, "cancelTokenSale: invalid nft address");
         sale.isActive = false;
-        if (_isLand) {
-            land.transferFrom(address(this), msg.sender, sale.tokenId);
-        } else {
-            house.transferFrom(address(this), msg.sender, sale.tokenId);
-        }
+        IERC721Upgradeable(_nft).transferFrom(
+            address(this),
+            msg.sender,
+            sale.tokenId
+        );
+
         sale.lastUpdated = block.timestamp;
 
         emit SaleCancelled(
             msg.sender,
-            _isLand ? address(land) : address(house),
+            _nft,
             block.timestamp,
             sale.tokenId,
             sale.price,
@@ -248,17 +260,18 @@ contract Market is Upgradeable {
         );
     }
 
-    function buyToken(bool _isLand, uint256 _saleId) external payable {
-        SaleInfo storage sale = _isLand
-            ? landSaleList[_saleId]
-            : houseSaleList[_saleId];
+    function buyNFT(uint256 _saleId) external payable {
+        SaleInfo storage sale = saleList[_saleId];
         require(
             sale.isActive && !sale.isSold,
             "cancelTokenSale: sale inactive or already sold"
         );
 
         if (sale.whitelistedBuyer != address(0)) {
-            require(sale.whitelistedBuyer == msg.sender, "buyToken: invalid whitelisted address to buy");
+            require(
+                sale.whitelistedBuyer == msg.sender,
+                "buyToken: invalid whitelisted address to buy"
+            );
         }
 
         sale.isSold = true;
@@ -285,16 +298,16 @@ contract Market is Upgradeable {
         }
 
         sale.lastUpdated = block.timestamp;
-        if (_isLand) {
-            land.transferFrom(address(this), msg.sender, sale.tokenId);
-        } else {
-            house.transferFrom(address(this), msg.sender, sale.tokenId);
-        }
+        IERC721Upgradeable(sale.nft).transferFrom(
+            address(this),
+            msg.sender,
+            sale.tokenId
+        );
 
         emit TokenPurchase(
             sale.owner,
             msg.sender,
-            _isLand ? address(land) : address(house),
+            sale.nft,
             block.timestamp,
             sale.tokenId,
             sale.price,
@@ -303,27 +316,19 @@ contract Market is Upgradeable {
         );
     }
 
-    function getAllSales()
-        external
-        view
-        returns (SaleInfo[] memory _lands, SaleInfo[] memory _houses)
-    {
-        return (landSaleList, houseSaleList);
+    function getAllSales() external view returns (SaleInfo[] memory _lands) {
+        return (saleList);
     }
 
-    function getSaleCounts()
-        external
-        view
-        returns (uint256 _landCount, uint256 _houseCount)
-    {
-        return (landSaleList.length, houseSaleList.length);
+    function getSaleCounts() external view returns (uint256 _landCount) {
+        return saleList.length;
     }
 
-    function getSaleInfo(bool _isLand, uint256 _index)
+    function getSaleInfo(uint256 _saleId)
         external
         view
-        returns (SaleInfo memory list)
+        returns (SaleInfo memory sale)
     {
-        return _isLand ? landSaleList[_index] : houseSaleList[_index];
+        return saleList[_saleId];
     }
 }

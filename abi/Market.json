@@ -37,6 +37,25 @@
       {
         "indexed": false,
         "internalType": "address",
+        "name": "nft",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "val",
+        "type": "bool"
+      }
+    ],
+    "name": "NFTSupported",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
         "name": "owner",
         "type": "address"
       },
@@ -241,6 +260,12 @@
         "internalType": "uint256",
         "name": "saleId",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "whitelistedBuyer",
+        "type": "address"
       }
     ],
     "name": "TokenSaleUpdated",
@@ -275,17 +300,12 @@
   {
     "inputs": [
       {
-        "internalType": "bool",
-        "name": "_isLand",
-        "type": "bool"
-      },
-      {
         "internalType": "uint256",
         "name": "_saleId",
         "type": "uint256"
       }
     ],
-    "name": "buyToken",
+    "name": "buyNFT",
     "outputs": [],
     "stateMutability": "payable",
     "type": "function"
@@ -293,9 +313,9 @@
   {
     "inputs": [
       {
-        "internalType": "bool",
-        "name": "_isLand",
-        "type": "bool"
+        "internalType": "address",
+        "name": "_nft",
+        "type": "address"
       },
       {
         "internalType": "uint256",
@@ -343,29 +363,6 @@
       }
     ],
     "name": "changePaymentList",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bool",
-        "name": "_isLand",
-        "type": "bool"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_saleId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_newPrice",
-        "type": "uint256"
-      }
-    ],
-    "name": "changeTokenSalePrice",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -446,62 +443,15 @@
             "internalType": "address",
             "name": "whitelistedBuyer",
             "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "nft",
+            "type": "address"
           }
         ],
         "internalType": "struct Market.SaleInfo[]",
         "name": "_lands",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "bool",
-            "name": "isSold",
-            "type": "bool"
-          },
-          {
-            "internalType": "bool",
-            "name": "isActive",
-            "type": "bool"
-          },
-          {
-            "internalType": "address payable",
-            "name": "owner",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "lastUpdated",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "price",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "saleId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentToken",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "whitelistedBuyer",
-            "type": "address"
-          }
-        ],
-        "internalType": "struct Market.SaleInfo[]",
-        "name": "_houses",
         "type": "tuple[]"
       }
     ],
@@ -516,11 +466,6 @@
         "internalType": "uint256",
         "name": "_landCount",
         "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_houseCount",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -529,13 +474,8 @@
   {
     "inputs": [
       {
-        "internalType": "bool",
-        "name": "_isLand",
-        "type": "bool"
-      },
-      {
         "internalType": "uint256",
-        "name": "_index",
+        "name": "_saleId",
         "type": "uint256"
       }
     ],
@@ -587,83 +527,16 @@
             "internalType": "address",
             "name": "whitelistedBuyer",
             "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "nft",
+            "type": "address"
           }
         ],
         "internalType": "struct Market.SaleInfo",
-        "name": "list",
+        "name": "sale",
         "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "house",
-    "outputs": [
-      {
-        "internalType": "contract IERC721Upgradeable",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "houseSaleList",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "isSold",
-        "type": "bool"
-      },
-      {
-        "internalType": "bool",
-        "name": "isActive",
-        "type": "bool"
-      },
-      {
-        "internalType": "address payable",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "lastUpdated",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "price",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "saleId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "paymentToken",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "whitelistedBuyer",
-        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -674,11 +547,6 @@
       {
         "internalType": "address",
         "name": "_land",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_house",
         "type": "address"
       },
       {
@@ -718,15 +586,22 @@
   },
   {
     "inputs": [],
-    "name": "land",
+    "name": "owner",
     "outputs": [
       {
-        "internalType": "contract IERC721Upgradeable",
+        "internalType": "address",
         "name": "",
         "type": "address"
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -737,7 +612,7 @@
         "type": "uint256"
       }
     ],
-    "name": "landSaleList",
+    "name": "saleList",
     "outputs": [
       {
         "internalType": "bool",
@@ -783,18 +658,10 @@
         "internalType": "address",
         "name": "whitelistedBuyer",
         "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [
+      },
       {
         "internalType": "address",
-        "name": "",
+        "name": "nft",
         "type": "address"
       }
     ],
@@ -802,8 +669,14 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "renounceOwnership",
+    "inputs": [
+      {
+        "internalType": "address[]",
+        "name": "_nfts",
+        "type": "address[]"
+      }
+    ],
+    "name": "setSupportedNFTs",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -811,9 +684,9 @@
   {
     "inputs": [
       {
-        "internalType": "bool",
-        "name": "_isLand",
-        "type": "bool"
+        "internalType": "address",
+        "name": "_nft",
+        "type": "address"
       },
       {
         "internalType": "uint256",
@@ -849,6 +722,63 @@
         "type": "uint256"
       }
     ],
+    "name": "supportedNFTList",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "supportedNFTMapping",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "supportedPaymentMapping",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "name": "supportedPaymentTokenList",
     "outputs": [
       {
@@ -869,6 +799,34 @@
       }
     ],
     "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_nft",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_saleId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_newPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_whitelistedBuyer",
+        "type": "address"
+      }
+    ],
+    "name": "updateSaleInfo",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
