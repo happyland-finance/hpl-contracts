@@ -45,12 +45,6 @@
         "internalType": "bytes",
         "name": "lands",
         "type": "bytes"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "houses",
-        "type": "bytes"
       }
     ],
     "name": "NFTDeposit",
@@ -69,12 +63,6 @@
         "indexed": false,
         "internalType": "bytes",
         "name": "lands",
-        "type": "bytes"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "houses",
         "type": "bytes"
       }
     ],
@@ -232,11 +220,6 @@
         "internalType": "uint256[]",
         "name": "_lands",
         "type": "uint256[]"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "_houses",
-        "type": "uint256[]"
       }
     ],
     "name": "depositNFTsToPlay",
@@ -260,19 +243,6 @@
     "name": "depositTokensToPlay",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "house",
-    "outputs": [
-      {
-        "internalType": "contract IERC721Upgradeable",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -316,11 +286,6 @@
       {
         "internalType": "contract IERC721Upgradeable",
         "name": "_land",
-        "type": "address"
-      },
-      {
-        "internalType": "contract IERC721Upgradeable",
-        "name": "_house",
         "type": "address"
       },
       {
@@ -481,11 +446,6 @@
       {
         "internalType": "uint256[]",
         "name": "_lands",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "_houses",
         "type": "uint256[]"
       },
       {

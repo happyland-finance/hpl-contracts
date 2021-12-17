@@ -18,7 +18,6 @@ contract HappyLand is Upgradeable, SignerRecover {
     IERC20Upgradeable public hpl;
     IERC20Upgradeable public hpw;
     IERC721Upgradeable public land;
-    IERC721Upgradeable public house;
     address public operator;
 
     struct UserInfo {
@@ -26,8 +25,6 @@ contract HappyLand is Upgradeable, SignerRecover {
         uint256 hpwDeposit;
         uint256[] depositedLands;
         mapping(uint256 => uint256) landIdToIndex; //index + 1
-        uint256[] depositedHouses;
-        mapping(uint256 => uint256) houseIdToIndex; //index + 1
         uint256 lastUpdatedAt;
         uint256 hplRewardClaimed;
         uint256 hpwRewardClaimed;
@@ -42,20 +39,15 @@ contract HappyLand is Upgradeable, SignerRecover {
         uint256 hplAmount,
         uint256 hpwAmount
     );
-    event NFTDeposit(address depositor, bytes lands, bytes houses);
-    event NFTWithdraw(address withdrawer, bytes lands, bytes houses);
+    event NFTDeposit(address depositor, bytes lands);
+    event NFTWithdraw(address withdrawer, bytes lands);
 
-    event RewardsClaimed(
-        address claimer,
-        uint256 hplAmount,
-        uint256 hpwAmount
-    );
+    event RewardsClaimed(address claimer, uint256 hplAmount, uint256 hpwAmount);
 
     function initialize(
         IERC20Upgradeable _hpl,
         IERC20Upgradeable _hpw,
         IERC721Upgradeable _land,
-        IERC721Upgradeable _house,
         address _operator
     ) external initializer {
         __Ownable_init();
@@ -63,7 +55,6 @@ contract HappyLand is Upgradeable, SignerRecover {
         hpl = _hpl;
         hpw = _hpw;
         land = _land;
-        house = _house;
         operator = _operator;
     }
 
@@ -82,10 +73,7 @@ contract HappyLand is Upgradeable, SignerRecover {
         emit TokenDeposit(msg.sender, _hplAmount, _hpwAmount);
     }
 
-    function depositNFTsToPlay(
-        uint256[] memory _lands,
-        uint256[] memory _houses
-    ) external {
+    function depositNFTsToPlay(uint256[] memory _lands) external {
         UserInfo storage _user = userInfo[msg.sender];
         for (uint256 i = 0; i < _lands.length; i++) {
             land.safeTransferFrom(msg.sender, address(this), _lands[i]);
@@ -93,23 +81,13 @@ contract HappyLand is Upgradeable, SignerRecover {
             _user.landIdToIndex[_lands[i]] = _user.depositedLands.length;
         }
 
-        for (uint256 i = 0; i < _houses.length; i++) {
-            house.safeTransferFrom(msg.sender, address(this), _houses[i]);
-            _user.depositedHouses.push(_houses[i]);
-            _user.houseIdToIndex[_houses[i]] = _user.depositedHouses.length;
-        }
         userInfo[msg.sender].lastUpdatedAt = block.timestamp;
 
-        emit NFTDeposit(
-            msg.sender,
-            abi.encodePacked(_lands),
-            abi.encodePacked(_houses)
-        );
+        emit NFTDeposit(msg.sender, abi.encodePacked(_lands));
     }
 
     function withdrawNFTs(
         uint256[] memory _lands,
-        uint256[] memory _houses,
         uint256 _expiredTime,
         bytes32 r,
         bytes32 s,
@@ -117,7 +95,7 @@ contract HappyLand is Upgradeable, SignerRecover {
     ) external {
         require(block.timestamp < _expiredTime, "withdrawNFTs: !expired");
         bytes32 msgHash = keccak256(
-            abi.encode(msg.sender, _lands, _houses, _expiredTime)
+            abi.encode(msg.sender, _lands, _expiredTime)
         );
         require(
             operator == recoverSigner(r, s, v, msgHash),
@@ -138,28 +116,8 @@ contract HappyLand is Upgradeable, SignerRecover {
             delete _user.landIdToIndex[_lands[i]];
         }
 
-        for (uint256 i = 0; i < _houses.length; i++) {
-            require(
-                _user.houseIdToIndex[_houses[i]] > 0,
-                "invalid land tokenId"
-            );
-            house.safeTransferFrom(address(this), msg.sender, _houses[i]);
-            //swap
-            uint256 _index = _user.houseIdToIndex[_houses[i]] - 1;
-            _user.depositedHouses[_index] = _user.depositedHouses[
-                _user.depositedHouses.length - 1
-            ];
-            _user.houseIdToIndex[_user.depositedHouses[_index]] = _index + 1;
-            _user.depositedHouses.pop();
-
-            delete _user.houseIdToIndex[_houses[i]];
-        }
         userInfo[msg.sender].lastUpdatedAt = block.timestamp;
-        emit NFTWithdraw(
-            msg.sender,
-            abi.encodePacked(_lands),
-            abi.encodePacked(_houses)
-        );
+        emit NFTWithdraw(msg.sender, abi.encodePacked(_lands));
     }
 
     function withdrawTokens(
@@ -231,10 +189,10 @@ contract HappyLand is Upgradeable, SignerRecover {
 
         _user.hplRewardClaimed = _hplRewards;
         _user.hpwRewardClaimed = _hpwRewards;
-        
+
         hpl.safeTransfer(msg.sender, toTransferHpl);
         hpw.safeTransfer(msg.sender, toTransferHpw);
 
         emit RewardsClaimed(msg.sender, toTransferHpl, toTransferHpw);
-    }   
+    }
 }
