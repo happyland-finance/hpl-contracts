@@ -37,13 +37,19 @@
       {
         "indexed": false,
         "internalType": "address",
+        "name": "nft",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
         "name": "depositor",
         "type": "address"
       },
       {
         "indexed": false,
         "internalType": "bytes",
-        "name": "lands",
+        "name": "tokenIds",
         "type": "bytes"
       }
     ],
@@ -56,13 +62,19 @@
       {
         "indexed": false,
         "internalType": "address",
+        "name": "nft",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
         "name": "withdrawer",
         "type": "address"
       },
       {
         "indexed": false,
         "internalType": "bytes",
-        "name": "lands",
+        "name": "tokenIds",
         "type": "bytes"
       }
     ],
@@ -217,8 +229,13 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "_nft",
+        "type": "address"
+      },
+      {
         "internalType": "uint256[]",
-        "name": "_lands",
+        "name": "_tokenIds",
         "type": "uint256[]"
       }
     ],
@@ -249,6 +266,25 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "_nft",
+        "type": "address"
+      }
+    ],
+    "name": "getDepositedNFTs",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "depositedLands",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "_user",
         "type": "address"
       }
@@ -264,11 +300,6 @@
         "internalType": "uint256",
         "name": "hpwDeposit",
         "type": "uint256"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "depositedLands",
-        "type": "uint256[]"
       },
       {
         "internalType": "uint256",
@@ -328,11 +359,6 @@
         "type": "address"
       },
       {
-        "internalType": "contract IERC721Upgradeable",
-        "name": "_land",
-        "type": "address"
-      },
-      {
         "internalType": "address",
         "name": "_operator",
         "type": "address"
@@ -341,19 +367,6 @@
     "name": "initialize",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "land",
-    "outputs": [
-      {
-        "internalType": "contract IERC721Upgradeable",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -488,8 +501,13 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "_nft",
+        "type": "address"
+      },
+      {
         "internalType": "uint256[]",
-        "name": "_lands",
+        "name": "_tokenIds",
         "type": "uint256[]"
       },
       {

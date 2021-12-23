@@ -20,7 +20,7 @@ module.exports = async (hre) => {
   const chainId = chainIdByName(network.name)
 
   log('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-  log(' HappyLand deployment')
+  log(' LetsFarm deployment')
   log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n')
 
   log('  Using Network: ', chainNameById(chainId))
@@ -36,17 +36,17 @@ module.exports = async (hre) => {
   let landAddress = require(`../deployments/${chainId}/Land.json`).address
 
   log('Deploying HappyLand...')
-  const HappyLand = await ethers.getContractFactory('HappyLand')
-  const happyLand = await upgrades.deployProxy(
-    HappyLand,
-    [hplAddress, hpwAddress, landAddress, constants.getOperator(chainId)],
+  const LetsFarm = await ethers.getContractFactory('LetsFarm')
+  const letsfarm = await upgrades.deployProxy(
+    LetsFarm,
+    [hplAddress, hpwAddress, constants.getOperator(chainId)],
     { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 },
   )
-  log('HappyLand address : ', happyLand.address)
-  deployData['HappyLand'] = {
-    abi: getContractAbi('HappyLand'),
-    address: happyLand.address,
-    deployTransaction: happyLand.deployTransaction,
+  log('LetsFarm address : ', letsfarm.address)
+  deployData['LetsFarm'] = {
+    abi: getContractAbi('LetsFarm'),
+    address: letsfarm.address,
+    deployTransaction: letsfarm.deployTransaction,
   }
 
   saveDeploymentData(chainId, deployData)
@@ -55,4 +55,4 @@ module.exports = async (hre) => {
   log('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n')
 }
 
-module.exports.tags = ['happyland']
+module.exports.tags = ['letsfarm']

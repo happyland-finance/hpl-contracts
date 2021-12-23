@@ -11,27 +11,29 @@ import "../lib/SignerRecover.sol";
 import "../interfaces/IBurn.sol";
 import "../lib/Upgradeable.sol";
 
-contract HappyLand is Upgradeable, SignerRecover {
+contract LetsFarm is Upgradeable, SignerRecover {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
     IERC20Upgradeable public hpl;
     IERC20Upgradeable public hpw;
-    IERC721Upgradeable public land;
     address public operator;
 
     struct UserInfo {
         uint256 hplDeposit;
         uint256 hpwDeposit;
-        uint256[] depositedLands;
-        mapping(uint256 => uint256) landIdToIndex; //index + 1
         uint256 lastUpdatedAt;
         uint256 hplRewardClaimed;
         uint256 hpwRewardClaimed;
     }
 
-    mapping(address => UserInfo) public userInfo;
+    struct DepositedNFT {
+        uint256[] depositedTokenIds;
+        mapping(uint256 => uint256) tokenIdToIndex; //index + 1
+    }
 
+    mapping(address => UserInfo) public userInfo;
+    mapping(address => DepositedNFT) nftUserInfo;
     //events
     event TokenDeposit(address depositor, uint256 hplAmount, uint256 hpwAmount);
     event TokenWithdraw(
@@ -39,22 +41,20 @@ contract HappyLand is Upgradeable, SignerRecover {
         uint256 hplAmount,
         uint256 hpwAmount
     );
-    event NFTDeposit(address depositor, bytes lands);
-    event NFTWithdraw(address withdrawer, bytes lands);
+    event NFTDeposit(address nft, address depositor, bytes tokenIds);
+    event NFTWithdraw(address nft, address withdrawer, bytes tokenIds);
 
     event RewardsClaimed(address claimer, uint256 hplAmount, uint256 hpwAmount);
 
     function initialize(
         IERC20Upgradeable _hpl,
         IERC20Upgradeable _hpw,
-        IERC721Upgradeable _land,
         address _operator
     ) external initializer {
         __Ownable_init();
 
         hpl = _hpl;
         hpw = _hpw;
-        land = _land;
         operator = _operator;
     }
 
@@ -73,21 +73,28 @@ contract HappyLand is Upgradeable, SignerRecover {
         emit TokenDeposit(msg.sender, _hplAmount, _hpwAmount);
     }
 
-    function depositNFTsToPlay(uint256[] memory _lands) external {
-        UserInfo storage _user = userInfo[msg.sender];
-        for (uint256 i = 0; i < _lands.length; i++) {
-            land.safeTransferFrom(msg.sender, address(this), _lands[i]);
-            _user.depositedLands.push(_lands[i]);
-            _user.landIdToIndex[_lands[i]] = _user.depositedLands.length;
+    function depositNFTsToPlay(address _nft, uint256[] memory _tokenIds)
+        external
+    {
+        DepositedNFT storage _user = nftUserInfo[msg.sender];
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            IERC721Upgradeable(_nft).safeTransferFrom(
+                msg.sender,
+                address(this),
+                _tokenIds[i]
+            );
+            _user.depositedTokenIds.push(_tokenIds[i]);
+            _user.tokenIdToIndex[_tokenIds[i]] = _user.depositedTokenIds.length;
         }
 
         userInfo[msg.sender].lastUpdatedAt = block.timestamp;
 
-        emit NFTDeposit(msg.sender, abi.encodePacked(_lands));
+        emit NFTDeposit(_nft, msg.sender, abi.encodePacked(_tokenIds));
     }
 
     function withdrawNFTs(
-        uint256[] memory _lands,
+        address _nft,
+        uint256[] memory _tokenIds,
         uint256 _expiredTime,
         bytes32 r,
         bytes32 s,
@@ -95,29 +102,33 @@ contract HappyLand is Upgradeable, SignerRecover {
     ) external {
         require(block.timestamp < _expiredTime, "withdrawNFTs: !expired");
         bytes32 msgHash = keccak256(
-            abi.encode(msg.sender, _lands, _expiredTime)
+            abi.encode(_nft, msg.sender, _tokenIds, _expiredTime)
         );
         require(
             operator == recoverSigner(r, s, v, msgHash),
             "invalid operator"
         );
-        UserInfo storage _user = userInfo[msg.sender];
-        for (uint256 i = 0; i < _lands.length; i++) {
-            require(_user.landIdToIndex[_lands[i]] > 0, "invalid land tokenId");
-            land.safeTransferFrom(address(this), msg.sender, _lands[i]);
+        DepositedNFT storage _user = nftUserInfo[msg.sender];
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            require(_user.tokenIdToIndex[_tokenIds[i]] > 0, "invalid tokenId");
+            IERC721Upgradeable(_nft).safeTransferFrom(
+                address(this),
+                msg.sender,
+                _tokenIds[i]
+            );
             //swap
-            uint256 _index = _user.landIdToIndex[_lands[i]] - 1;
-            _user.depositedLands[_index] = _user.depositedLands[
-                _user.depositedLands.length - 1
+            uint256 _index = _user.tokenIdToIndex[_tokenIds[i]] - 1;
+            _user.depositedTokenIds[_index] = _user.depositedTokenIds[
+                _user.depositedTokenIds.length - 1
             ];
-            _user.landIdToIndex[_user.depositedLands[_index]] = _index + 1;
-            _user.depositedLands.pop();
+            _user.tokenIdToIndex[_user.depositedTokenIds[_index]] = _index + 1;
+            _user.depositedTokenIds.pop();
 
-            delete _user.landIdToIndex[_lands[i]];
+            delete _user.tokenIdToIndex[_tokenIds[i]];
         }
 
         userInfo[msg.sender].lastUpdatedAt = block.timestamp;
-        emit NFTWithdraw(msg.sender, abi.encodePacked(_lands));
+        emit NFTWithdraw(_nft, msg.sender, abi.encodePacked(_tokenIds));
     }
 
     function withdrawTokens(
@@ -202,7 +213,6 @@ contract HappyLand is Upgradeable, SignerRecover {
         returns (
             uint256 hplDeposit,
             uint256 hpwDeposit,
-            uint256[] memory depositedLands,
             uint256 lastUpdatedAt,
             uint256 hplRewardClaimed,
             uint256 hpwRewardClaimed
@@ -212,10 +222,17 @@ contract HappyLand is Upgradeable, SignerRecover {
         return (
             _userInfo.hplDeposit,
             _userInfo.hpwDeposit,
-            _userInfo.depositedLands,
             _userInfo.lastUpdatedAt,
             _userInfo.hplRewardClaimed,
             _userInfo.hpwRewardClaimed
         );
+    }
+
+    function getDepositedNFTs(address _nft)
+        external
+        view
+        returns (uint256[] memory depositedLands)
+    {
+        return nftUserInfo[_nft].depositedTokenIds;
     }
 }
