@@ -33,7 +33,8 @@ contract LetsFarm is Upgradeable, SignerRecover {
     }
 
     mapping(address => UserInfo) public userInfo;
-    mapping(address => DepositedNFT) nftUserInfo;
+    //nft => user => DepositedNFT
+    mapping(address => mapping(address => DepositedNFT)) nftUserInfo;
     //events
     event TokenDeposit(address depositor, uint256 hplAmount, uint256 hpwAmount);
     event TokenWithdraw(
@@ -76,7 +77,7 @@ contract LetsFarm is Upgradeable, SignerRecover {
     function depositNFTsToPlay(address _nft, uint256[] memory _tokenIds)
         external
     {
-        DepositedNFT storage _user = nftUserInfo[msg.sender];
+        DepositedNFT storage _user = nftUserInfo[_nft][msg.sender];
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             IERC721Upgradeable(_nft).safeTransferFrom(
                 msg.sender,
@@ -108,7 +109,7 @@ contract LetsFarm is Upgradeable, SignerRecover {
             operator == recoverSigner(r, s, v, msgHash),
             "invalid operator"
         );
-        DepositedNFT storage _user = nftUserInfo[msg.sender];
+        DepositedNFT storage _user = nftUserInfo[_nft][msg.sender];
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             require(_user.tokenIdToIndex[_tokenIds[i]] > 0, "invalid tokenId");
             IERC721Upgradeable(_nft).safeTransferFrom(
@@ -228,11 +229,11 @@ contract LetsFarm is Upgradeable, SignerRecover {
         );
     }
 
-    function getDepositedNFTs(address _nft)
+    function getDepositedNFTs(address _nft, address _user)
         external
         view
         returns (uint256[] memory depositedLands)
     {
-        return nftUserInfo[_nft].depositedTokenIds;
+        return nftUserInfo[_nft][_user].depositedTokenIds;
     }
 }
