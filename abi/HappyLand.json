@@ -246,6 +246,50 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      }
+    ],
+    "name": "getUserInfo",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "hplDeposit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "hpwDeposit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "depositedLands",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "lastUpdatedAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "hplRewardClaimed",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "hpwRewardClaimed",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "hpl",
     "outputs": [

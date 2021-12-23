@@ -195,4 +195,27 @@ contract HappyLand is Upgradeable, SignerRecover {
 
         emit RewardsClaimed(msg.sender, toTransferHpl, toTransferHpw);
     }
+
+    function getUserInfo(address _user)
+        external
+        view
+        returns (
+            uint256 hplDeposit,
+            uint256 hpwDeposit,
+            uint256[] memory depositedLands,
+            uint256 lastUpdatedAt,
+            uint256 hplRewardClaimed,
+            uint256 hpwRewardClaimed
+        )
+    {
+        UserInfo storage _userInfo = userInfo[_user];
+        return (
+            _userInfo.hplDeposit,
+            _userInfo.hpwDeposit,
+            _userInfo.depositedLands,
+            _userInfo.lastUpdatedAt,
+            _userInfo.hplRewardClaimed,
+            _userInfo.hpwRewardClaimed
+        );
+    }
 }
