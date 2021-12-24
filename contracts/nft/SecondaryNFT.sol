@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 //NFT used for upgrading land
-contract UpgradeNFT is
+contract SecondaryNFT is
     Ownable,
     ERC721Enumerable,
     ILand,

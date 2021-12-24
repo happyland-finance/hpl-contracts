@@ -31,16 +31,16 @@ module.exports = async (hre) => {
   let NFTSaleAddress = require(`../deployments/${chainId}/NFTSale.json`).address
 
   log('Deploying Land...')
-  const UpgradeNFT = await ethers.getContractFactory('UpgradeNFT')
-  const UpgradeNFTInstance = await UpgradeNFT.deploy()
-  const upgradeNFT = await UpgradeNFTInstance.deployed()
-  await upgradeNFT.setFactory(NFTSaleAddress)
+  const SecondaryNFT = await ethers.getContractFactory('SecondaryNFT')
+  const SecondaryNFTInstance = await SecondaryNFT.deploy()
+  const secondaryNFT = await SecondaryNFTInstance.deployed()
+  await secondaryNFT.setFactory(NFTSaleAddress)
 
-  log('UpgradeNFT address : ', upgradeNFT.address)
-  deployData['UpgradeNFT'] = {
-    abi: getContractAbi('UpgradeNFT'),
-    address: upgradeNFT.address,
-    deployTransaction: upgradeNFT.deployTransaction,
+  log('SecondaryNFT address : ', secondaryNFT.address)
+  deployData['SecondaryNFT'] = {
+    abi: getContractAbi('SecondaryNFT'),
+    address: secondaryNFT.address,
+    deployTransaction: secondaryNFT.deployTransaction,
   }
 
   saveDeploymentData(chainId, deployData)
@@ -49,4 +49,4 @@ module.exports = async (hre) => {
   log('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n')
 }
 
-module.exports.tags = ['upgradenft']
+module.exports.tags = ['secondarynft']
