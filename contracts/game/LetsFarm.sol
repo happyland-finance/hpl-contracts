@@ -236,4 +236,14 @@ contract LetsFarm is Upgradeable, SignerRecover {
     {
         return nftUserInfo[_nft][_user].depositedTokenIds;
     }
+
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    ) external returns (bytes4) {
+        //do nothing
+        return bytes4("");
+    }
 }

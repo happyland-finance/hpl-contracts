@@ -20,7 +20,7 @@ module.exports = async (hre) => {
   const chainId = chainIdByName(network.name)
 
   log('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-  log(' HappyLand deployment')
+  log(' LetsFarm deployment')
   log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n')
 
   log('  Using Network: ', chainNameById(chainId))
@@ -33,15 +33,14 @@ module.exports = async (hre) => {
 
   let hplAddress = require(`../deployments/${chainId}/HPL.json`).address
   let hpwAddress = require(`../deployments/${chainId}/HPW.json`).address
-  let landAddress = require(`../deployments/${chainId}/Land.json`).address
-  let happyLandAddress = require(`../deployments/${chainId}/HappyLand.json`)
+  let LetsFarmAddress = require(`../deployments/${chainId}/LetsFarm.json`)
     .address
-  log('Deploying HappyLand...')
-  const HappyLand = await ethers.getContractFactory('HappyLand')
+  log('Deploying LetsFarm...')
+  const LetsFarm = await ethers.getContractFactory('LetsFarm')
   await upgrades.upgradeProxy(
-    happyLandAddress,
-    HappyLand,
-    [hplAddress, hpwAddress, landAddress, constants.getOperator(chainId)],
+    LetsFarmAddress,
+    LetsFarm,
+    [hplAddress, hpwAddress, constants.getOperator(chainId)],
     { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 },
   )
 
@@ -51,4 +50,4 @@ module.exports = async (hre) => {
   log('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n')
 }
 
-module.exports.tags = ['happylandupgrade']
+module.exports.tags = ['letsfarmupgrade']
