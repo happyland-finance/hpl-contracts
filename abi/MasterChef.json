@@ -189,6 +189,11 @@
         "type": "address"
       },
       {
+        "internalType": "uint256",
+        "name": "_minLockedDuration",
+        "type": "uint256"
+      },
+      {
         "internalType": "bool",
         "name": "_withUpdate",
         "type": "bool"
@@ -235,6 +240,11 @@
       {
         "internalType": "uint256",
         "name": "_amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_lockedDuration",
         "type": "uint256"
       }
     ],
@@ -373,6 +383,72 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_addr",
+        "type": "address"
+      }
+    ],
+    "name": "getUserInfo",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "stakeAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "rewardDebt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "hpwRewardDebt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "stakeWeight",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "tokenAmount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "weight",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lockedFrom",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lockedUntil",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct MasterChef.TokenDeposit[]",
+        "name": "deposits",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "hplPerBlock",
     "outputs": [
@@ -497,6 +573,11 @@
       },
       {
         "internalType": "uint256",
+        "name": "totalWeight",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
         "name": "allocPoint",
         "type": "uint256"
       },
@@ -507,12 +588,17 @@
       },
       {
         "internalType": "uint256",
-        "name": "accHPLPerShare",
+        "name": "accHPLPerWeight",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "accHPWPerShare",
+        "name": "accHPWPerWeight",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minLockedDuration",
         "type": "uint256"
       }
     ],
@@ -534,7 +620,7 @@
   },
   {
     "inputs": [],
-    "name": "poolLockedTime",
+    "name": "poolLockedTimeAfterUnstake",
     "outputs": [
       {
         "internalType": "uint256",
@@ -605,11 +691,29 @@
     "inputs": [
       {
         "internalType": "uint256",
+        "name": "_pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_minLockedDuration",
+        "type": "uint256"
+      }
+    ],
+    "name": "setMinLockedDuration",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
         "name": "_lockedTime",
         "type": "uint256"
       }
     ],
-    "name": "setPoolLockedTime",
+    "name": "setPoolLockedTimeAfterUnstake",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -794,7 +898,7 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "stakeAmount",
         "type": "uint256"
       },
       {
@@ -805,6 +909,11 @@
       {
         "internalType": "uint256",
         "name": "hpwRewardDebt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "stakeWeight",
         "type": "uint256"
       }
     ],
@@ -821,6 +930,11 @@
       {
         "internalType": "uint256",
         "name": "_amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_depositId",
         "type": "uint256"
       }
     ],

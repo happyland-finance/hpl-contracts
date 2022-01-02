@@ -10,8 +10,9 @@ import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "../lib/SignerRecover.sol";
 import "../interfaces/IBurn.sol";
 import "../lib/Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 
-contract LetsFarm is Upgradeable, SignerRecover {
+contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -79,7 +80,7 @@ contract LetsFarm is Upgradeable, SignerRecover {
     {
         DepositedNFT storage _user = nftUserInfo[_nft][msg.sender];
         for (uint256 i = 0; i < _tokenIds.length; i++) {
-            IERC721Upgradeable(_nft).safeTransferFrom(
+            IERC721Upgradeable(_nft).transferFrom(
                 msg.sender,
                 address(this),
                 _tokenIds[i]
@@ -112,7 +113,7 @@ contract LetsFarm is Upgradeable, SignerRecover {
         DepositedNFT storage _user = nftUserInfo[_nft][msg.sender];
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             require(_user.tokenIdToIndex[_tokenIds[i]] > 0, "invalid tokenId");
-            IERC721Upgradeable(_nft).safeTransferFrom(
+            IERC721Upgradeable(_nft).transferFrom(
                 address(this),
                 msg.sender,
                 _tokenIds[i]
@@ -237,12 +238,20 @@ contract LetsFarm is Upgradeable, SignerRecover {
         return nftUserInfo[_nft][_user].depositedTokenIds;
     }
 
+    function getDepositedNFTs2(address _nft, address _user)
+        external
+        view
+        returns (uint256[] memory depositedLands)
+    {
+        return nftUserInfo[_nft][_user].depositedTokenIds;
+    }
+
     function onERC721Received(
         address operator,
         address from,
         uint256 tokenId,
         bytes calldata data
-    ) external returns (bytes4) {
+    ) external override returns (bytes4) {
         //do nothing
         return bytes4("");
     }

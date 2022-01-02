@@ -37,11 +37,7 @@ task(TASK_TEST, 'Runs the coverage report', async (args, hre, runSuper) => {
 module.exports = {
   defaultNetwork: 'hardhat',
   networks: {
-    hardhat: {
-      forking: {
-        url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
-      },
-    },
+    hardhat: {},
     kovan: {
       url: `https://kovan.infura.io/v3/${process.env.INFURA_KEY}`,
       // gasPrice: 6e9,

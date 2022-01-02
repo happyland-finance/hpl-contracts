@@ -290,6 +290,30 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "_nft",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      }
+    ],
+    "name": "getDepositedNFTs2",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "depositedLands",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "_user",
         "type": "address"
       }
