@@ -125,6 +125,9 @@ module.exports = async (hre) => {
     true,
   )
 
+  //add HPL pool
+  let lockedTime = 86400 * 7 * 2
+  await masterchef.add(100, hplAddress, lockedTime, true)
   saveDeploymentData(chainId, deployData)
   log('\n  Contract Deployment Data saved to "deployments" directory.')
 
