@@ -565,6 +565,30 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "userInfoTokenWithdraw",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "hplWithdraw",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "hpwWithdraw",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "_nft",
         "type": "address"
       },
@@ -608,7 +632,17 @@
       },
       {
         "internalType": "uint256",
+        "name": "_hplWithdrawAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
         "name": "_hpwSpent",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_hpwWithdrawAmount",
         "type": "uint256"
       },
       {

@@ -48,6 +48,12 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
 
     event RewardsClaimed(address claimer, uint256 hplAmount, uint256 hpwAmount);
 
+    struct UserInfoTokenWithdraw {
+        uint256 hplWithdraw;
+        uint256 hpwWithdraw;
+    }
+    mapping(address => UserInfoTokenWithdraw) public userInfoTokenWithdraw;
+
     function initialize(
         IERC20Upgradeable _hpl,
         IERC20Upgradeable _hpw,
@@ -135,7 +141,9 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
 
     function withdrawTokens(
         uint256 _hplSpent,
+        uint256 _hplWithdrawAmount,
         uint256 _hpwSpent,
+        uint256 _hpwWithdrawAmount,
         uint256 _expiredTime,
         bytes32 r,
         bytes32 s,
@@ -143,35 +151,51 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     ) external {
         require(block.timestamp < _expiredTime, "withdrawTokens: !expired");
         bytes32 msgHash = keccak256(
-            abi.encode(msg.sender, _hplSpent, _hpwSpent, _expiredTime)
+            abi.encode(
+                msg.sender,
+                _hplSpent,
+                _hplWithdrawAmount,
+                _hpwSpent,
+                _hpwWithdrawAmount,
+                _expiredTime
+            )
         );
         require(
             operator == recoverSigner(r, s, v, msgHash),
             "invalid operator"
         );
         UserInfo storage _user = userInfo[msg.sender];
-
-        require(_user.hplDeposit >= _hplSpent, "invalid hplSpent");
-        require(_user.hpwDeposit >= _hpwSpent, "invalid hpwSpent");
-
-        //return hpl
-        hpl.safeTransfer(msg.sender, _user.hplDeposit - _hplSpent);
-
-        //return hpw
-        hpw.safeTransfer(msg.sender, _user.hpwDeposit - _hpwSpent);
-
-        //burn hplSpent and hpwSpent
-        IBurn(address(hpl)).burn(_hplSpent);
-        IBurn(address(hpw)).burn(_hpwSpent);
-
-        emit TokenWithdraw(
-            msg.sender,
-            _user.hplDeposit - _hplSpent,
-            _user.hpwDeposit - _hpwSpent
+        UserInfoTokenWithdraw
+            storage _userInfoTokenWithdraw = userInfoTokenWithdraw[msg.sender];
+        require(
+            _user.hplDeposit >=
+                _hplSpent +
+                    _hplWithdrawAmount +
+                    _userInfoTokenWithdraw.hplWithdraw,
+            "invalid hplSpent"
+        );
+        require(
+            _user.hpwDeposit >=
+                _hpwSpent +
+                    _hpwWithdrawAmount +
+                    _userInfoTokenWithdraw.hpwWithdraw,
+            "invalid hpwSpent"
         );
 
-        _user.hplDeposit = _hplSpent;
-        _user.hpwDeposit = _hpwSpent;
+        //return hpl
+        hpl.safeTransfer(msg.sender, _hplWithdrawAmount);
+
+        //return hpw
+        hpw.safeTransfer(msg.sender, _hpwWithdrawAmount);
+
+        //burn hplSpent and hpwSpent
+        // IBurn(address(hpl)).burn(_hplSpent);
+        // IBurn(address(hpw)).burn(_hpwSpent);
+
+        emit TokenWithdraw(msg.sender, _hplWithdrawAmount, _hpwWithdrawAmount);
+
+        _userInfoTokenWithdraw.hplWithdraw += _hplWithdrawAmount;
+        _userInfoTokenWithdraw.hpwWithdraw += _hpwWithdrawAmount;
 
         _user.lastUpdatedAt = block.timestamp;
     }
@@ -194,8 +218,8 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         );
         UserInfo storage _user = userInfo[msg.sender];
 
-        require(_user.hplRewardClaimed < _hplRewards, "invalid _hplRewards");
-        require(_user.hpwRewardClaimed < _hpwRewards, "invalid _hpwRewards");
+        require(_user.hplRewardClaimed <= _hplRewards, "invalid _hplRewards");
+        require(_user.hpwRewardClaimed <= _hpwRewards, "invalid _hpwRewards");
 
         uint256 toTransferHpl = _hplRewards - _user.hplRewardClaimed;
         uint256 toTransferHpw = _hpwRewards - _user.hpwRewardClaimed;
