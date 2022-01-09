@@ -330,6 +330,7 @@ contract MasterChef is Upgradeable {
             _lockedDuration >= pool.minLockedDuration,
             "minimum stake duration is 2 weeks"
         );
+        require(_lockedDuration <= 700 days, "max stake duration is 700 days");
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
         if (user.stakeAmount > 0) {
