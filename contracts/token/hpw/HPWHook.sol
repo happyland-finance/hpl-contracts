@@ -4,14 +4,10 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "../../interfaces/IPancakePair.sol";
 import "../../interfaces/IPancakeRouter02.sol";
 import "../../interfaces/ITokenHook.sol";
-import "../../lib/BlackholePrevention.sol";
+import "../../lib/BlackholePreventionOwnable.sol";
 import "../../lib/Upgradeable.sol";
 
-contract HPWHook is
-    Upgradeable,
-    ITokenHook,
-    BlackholePrevention
-{
+contract HPWHook is Upgradeable, ITokenHook {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     IERC20Upgradeable public hpw;
     bool public swapAndLiquidifyEnabled;
@@ -28,10 +24,7 @@ contract HPWHook is
     uint256 public liquidityFee;
     uint256 public burnFee;
 
-    function initialize(address _pancakeRouter)
-        external
-        initializer
-    {
+    function initialize(address _pancakeRouter) external initializer {
         initOwner();
         zeroFeeList[msg.sender] = true;
         stakeRewardFee = 0;
@@ -85,8 +78,8 @@ contract HPWHook is
         liquidityPair = IPancakePair(_liquidityPair);
         if (_liquidityPair != address(0)) {
             require(
-                liquidityPair.token0() == address(hpw) ||    // huong
-                    liquidityPair.token1() == address(hpw),   // huong
+                liquidityPair.token0() == address(hpw) || // huong
+                    liquidityPair.token1() == address(hpw), // huong
                 "One of paired tokens must be HPW"
             );
         }
@@ -113,8 +106,8 @@ contract HPWHook is
     function swapTokensForToken(uint256 tokenAmount) private {
         // generate the pancake pair path of token -> weth
         address[] memory path = new address[](2);
-        path[0] = address(hpw);    //
-        path[1] = liquidityPair.token0() == address(hpw)   // huong
+        path[0] = address(hpw); //
+        path[1] = liquidityPair.token0() == address(hpw) // huong
             ? liquidityPair.token1()
             : liquidityPair.token0();
 
@@ -131,10 +124,12 @@ contract HPWHook is
     }
 
     function addLiquidityInternal(uint256 tokenAmount) private {
-        address otherToken = liquidityPair.token0() == address(hpw) // huong 
+        address otherToken = liquidityPair.token0() == address(hpw) // huong
             ? liquidityPair.token1()
             : liquidityPair.token0();
-        uint256 otherTokenAmount = IERC20Upgradeable(otherToken).balanceOf(address(this));
+        uint256 otherTokenAmount = IERC20Upgradeable(otherToken).balanceOf(
+            address(this)
+        );
         IERC20Upgradeable(otherToken).approve(
             address(pancakeRouter),
             otherTokenAmount
@@ -144,7 +139,7 @@ contract HPWHook is
 
         // add the liquidity
         pancakeRouter.addLiquidity(
-            address(hpw),   //huong
+            address(hpw), //huong
             otherToken,
             tokenAmount,
             otherTokenAmount,
@@ -190,31 +185,11 @@ contract HPWHook is
         )
     {
         if (zeroFeeList[sender] || zeroFeeList[recipient]) return (0, 0, 0);
+        if (
+            address(liquidityPair) != sender &&
+            address(liquidityPair) != recipient
+        ) return (0, 0, 0);
+
         return (stakeRewardFee, liquidityFee, burnFee); //0.5%
-    }
-
-    //rescue token
-    function withdrawEther(address payable receiver, uint256 amount)
-        external
-        virtual
-        onlyOwner
-    {
-        _withdrawEther(receiver, amount);
-    }
-
-    function withdrawERC20(
-        address payable receiver,
-        address tokenAddress,
-        uint256 amount
-    ) external virtual onlyOwner {
-        _withdrawERC20(receiver, tokenAddress, amount);
-    }
-
-    function withdrawERC721(
-        address payable receiver,
-        address tokenAddress,
-        uint256 tokenId
-    ) external virtual onlyOwner {
-        _withdrawERC721(receiver, tokenAddress, tokenId);
     }
 }

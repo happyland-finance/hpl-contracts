@@ -71,15 +71,18 @@ module.exports = async (hre) => {
     address: tokenLock.address,
     deployTransaction: tokenLock.deployTransaction,
   }
-
+  let startBlock = 0
+  if (chainId == 56) {
+    startBlock = 14212426 + 4 * 1200 + 100
+  }
   log('Deploying MasterChef...')
   const MasterChef = await ethers.getContractFactory('MasterChef')
   const masterchef = await upgrades.deployProxy(
     MasterChef,
     [
-      ethers.utils.parseEther('0.9'),
-      ethers.utils.parseEther('2'),
+      ethers.utils.parseEther('0.5'),
       0,
+      startBlock,
       rewardDistributor.address,
       tokenLock.address,
     ],
@@ -127,7 +130,7 @@ module.exports = async (hre) => {
 
   //add HPL pool
   let lockedTime = 86400 * 7 * 2
-  await masterchef.add(100, hplAddress, lockedTime, true)
+  await masterchef.add(100, hplAddress, lockedTime, false)
   saveDeploymentData(chainId, deployData)
   log('\n  Contract Deployment Data saved to "deployments" directory.')
 
