@@ -350,6 +350,50 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      }
+    ],
+    "name": "getUserInfo2",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "hplDeposit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "hpwDeposit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "lastUpdatedAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "hplRewardClaimed",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "hpwRewardClaimed",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "lastRewardClaimedAt",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "hpl",
     "outputs": [
@@ -396,6 +440,19 @@
     "name": "initialize",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "minTimeBetweenClaims",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -461,6 +518,19 @@
   {
     "inputs": [],
     "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_minTimeBetweenClaims",
+        "type": "uint256"
+      }
+    ],
+    "name": "setMinTimeBetweenClaims",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -555,6 +625,11 @@
       {
         "internalType": "uint256",
         "name": "hpwRewardClaimed",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "lastRewardClaimedAt",
         "type": "uint256"
       }
     ],

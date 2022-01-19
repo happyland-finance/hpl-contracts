@@ -65,7 +65,16 @@ contract HPWBase is
             "ERC20: transfer amount exceeds balance"
         );
 
-        if (!pancakePairs[sender] && address(tokenHook) != address(0)) {
+        (, uint256 liquidityFee, uint256 burnFee) = tokenHook.getTransferFees(
+            sender,
+            recipient,
+            amount
+        );
+
+        if (
+            (!pancakePairs[sender] && address(tokenHook) != address(0)) &&
+            (liquidityFee != 0 || burnFee != 0)
+        ) {
             tokenHook.addLiquidity();
         }
 
@@ -78,24 +87,34 @@ contract HPWBase is
             sender != address(tokenHook) &&
             recipient != address(tokenHook)
         ) {
-            (, uint256 liquidityFee, uint256 burnFee) = tokenHook
-                .getTransferFees(sender, recipient, amount);
-            uint256 burnAmount = (amount * burnFee) / 10000;
-            uint256 liquidityHolderAmount = (amount * liquidityFee) / 10000;
-            //burn
-            _totalSupply -= burnAmount;
-            //liquidityFee
-            _balances[address(tokenHook)] += liquidityHolderAmount;
+            if (liquidityFee == 0 && burnFee == 0) {
+                _balances[recipient] += amount;
+                emit Transfer(sender, recipient, amount);
+            } else {
+                uint256 burnAmount = (amount * burnFee) / 10000;
+                uint256 liquidityHolderAmount = (amount * liquidityFee) / 10000;
+                //burn
+                _totalSupply -= burnAmount;
+                //liquidityFee
+                _balances[address(tokenHook)] += liquidityHolderAmount;
 
-            _balances[recipient] += amount - burnAmount - liquidityHolderAmount;
+                _balances[recipient] +=
+                    amount -
+                    burnAmount -
+                    liquidityHolderAmount;
 
-            emit Transfer(sender, address(0), burnAmount);
-            emit Transfer(sender, address(tokenHook), liquidityHolderAmount);
-            emit Transfer(
-                sender,
-                recipient,
-                amount - burnAmount - liquidityHolderAmount
-            );
+                emit Transfer(sender, address(0), burnAmount);
+                emit Transfer(
+                    sender,
+                    address(tokenHook),
+                    liquidityHolderAmount
+                );
+                emit Transfer(
+                    sender,
+                    recipient,
+                    amount - burnAmount - liquidityHolderAmount
+                );
+            }
         } else {
             _balances[recipient] += amount;
             emit Transfer(sender, recipient, amount);

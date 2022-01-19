@@ -26,6 +26,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         uint256 lastUpdatedAt;
         uint256 hplRewardClaimed;
         uint256 hpwRewardClaimed;
+        uint256 lastRewardClaimedAt;
     }
 
     struct DepositedNFT {
@@ -54,16 +55,27 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     }
     mapping(address => UserInfoTokenWithdraw) public userInfoTokenWithdraw;
 
+    uint256 public minTimeBetweenClaims;
+
     function initialize(
         IERC20Upgradeable _hpl,
         IERC20Upgradeable _hpw,
         address _operator
     ) external initializer {
-        __Ownable_init();
+        initOwner();
+
+        minTimeBetweenClaims = 1 hours;
 
         hpl = _hpl;
         hpw = _hpw;
         operator = _operator;
+    }
+
+    function setMinTimeBetweenClaims(uint256 _minTimeBetweenClaims)
+        external
+        onlyOwner
+    {
+        minTimeBetweenClaims = _minTimeBetweenClaims;
     }
 
     function setOperator(address _op) external onlyOwner {
@@ -218,6 +230,10 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         );
         UserInfo storage _user = userInfo[msg.sender];
 
+        require(
+            _user.lastRewardClaimedAt + minTimeBetweenClaims < block.timestamp,
+            "!minTimeBetweenClaims"
+        );
         require(_user.hplRewardClaimed <= _hplRewards, "invalid _hplRewards");
         require(_user.hpwRewardClaimed <= _hpwRewards, "invalid _hpwRewards");
 
@@ -226,6 +242,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
 
         _user.hplRewardClaimed = _hplRewards;
         _user.hpwRewardClaimed = _hpwRewards;
+        _user.lastRewardClaimedAt = block.timestamp;
 
         hpl.safeTransfer(msg.sender, toTransferHpl);
         hpw.safeTransfer(msg.sender, toTransferHpw);
@@ -251,6 +268,29 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             _userInfo.lastUpdatedAt,
             _userInfo.hplRewardClaimed,
             _userInfo.hpwRewardClaimed
+        );
+    }
+
+    function getUserInfo2(address _user)
+        external
+        view
+        returns (
+            uint256 hplDeposit,
+            uint256 hpwDeposit,
+            uint256 lastUpdatedAt,
+            uint256 hplRewardClaimed,
+            uint256 hpwRewardClaimed,
+            uint256 lastRewardClaimedAt
+        )
+    {
+        UserInfo storage _userInfo = userInfo[_user];
+        return (
+            _userInfo.hplDeposit,
+            _userInfo.hpwDeposit,
+            _userInfo.lastUpdatedAt,
+            _userInfo.hplRewardClaimed,
+            _userInfo.hpwRewardClaimed,
+            _userInfo.lastRewardClaimedAt
         );
     }
 
