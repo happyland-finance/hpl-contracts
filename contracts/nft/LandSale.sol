@@ -7,9 +7,13 @@ import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "../lib/Upgradeable.sol";
 import "../interfaces/ILand.sol";
 import "../lib/SignerRecover.sol";
-import "../lib/BlackholePrevention.sol";
+import "../lib/BlackholePreventionUpgradeable.sol";
 
-contract LandSale is BlackholePrevention, SignerRecover, Upgradeable {
+contract LandSale is
+    BlackholePreventionUpgradeable,
+    SignerRecover,
+    Upgradeable
+{
     ILand public land;
     mapping(address => bool) public acceptToken;
     address public constant nativeToken =
@@ -41,7 +45,7 @@ contract LandSale is BlackholePrevention, SignerRecover, Upgradeable {
     mapping(address => OpenLandInfo) public openLandInfo;
 
     function initialize(ILand _land) external initializer {
-        __Ownable_init();
+        initOwner();
 
         land = _land;
         maxLandId = 1;
