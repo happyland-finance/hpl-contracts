@@ -1,160 +1,226 @@
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import "../interfaces/ILand.sol";
-import "../lib/BlackholePreventionUpgradeable.sol";
 import "../lib/Upgradeable.sol";
+import "../interfaces/ILand.sol";
 import "../lib/SignerRecover.sol";
+import "../lib/BlackholePreventionUpgradeable.sol";
 
-contract NFTSale is
-    Upgradeable,
-    PausableUpgradeable,
+contract LandSale is Upgradeable,
     BlackholePreventionUpgradeable,
     SignerRecover
+
 {
     using AddressUpgradeable for address payable;
-    using SafeMathUpgradeable for uint256;
-
     ILand public land;
-
-    address payable public feeTo;
+    mapping(address => bool) public acceptToken;
+    address public constant nativeToken =
+        0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF;
     address public operator;
+    uint256 public maxLandId;
+    uint256 public maxBoxNumber;
+    uint256 public currentBoxNumber;
 
-    //rarity => price
-    mapping(bytes32 => bool) public claimIds;
-
-    ILand public upgradeNFT;
-
-    event ClaimLand(
-        address user,
-        uint256 _tokenId,
-        uint256 _rarity,
-        uint256 _claimFee
+    event BuyBox(
+        address buyer,
+        address tokenPayment,
+        uint256 tokenAmount,
+        uint256 boxNumber
     );
+    event BuyBoxMultiToken(
+        address buyer,
+        bytes tokenPayment,
+        bytes tokenAmount,
+        uint256 boxNumber
+    );
+    event OpenBox(address buyer, uint256 tokenId, bytes32 landName);
 
-    event ClaimUpgradeNFT(address user, uint256 _tokenId, uint256 _claimFee);
+    struct OpenLandInfo {
+        bytes32 package;
+        uint256 tokenId;
+        bytes32 landName;
+    }
+    mapping(address => uint256) public buyerBoxNumber;
+    mapping(address => uint256) public buyerBoxOpen;
+    mapping(bytes32 => bool) public useKeys;
 
-    function initialize(
-        address _land,
-        address _upgradeNFT,
-        address payable _feeTo,
-        address _operator
-    ) external initializer {
+    function initialize(ILand _land) external initializer {
         initOwner();
 
-        land = ILand(_land);
-        feeTo = _feeTo;
+        land = _land;
+        maxLandId = 1;
+    }
 
+    function setLandAddress(ILand _land) public onlyOwner {
+        land = _land;
+    }
+
+    function setMaxLandId(uint256 max) public onlyOwner {
+        maxLandId = max;
+    }
+
+    function setMaxBoxNumber(uint256 max) public onlyOwner {
+        maxBoxNumber = max;
+    }
+
+    function addTokenAccept(address _token, bool _value) public onlyOwner {
+        acceptToken[_token] = _value;
+    }
+
+    function setOperator(address _operator) public onlyOwner {
         operator = _operator;
-        upgradeNFT = ILand(_upgradeNFT);
     }
 
-    function setFeeTo(address payable _feeTo) external onlyOwner {
-        feeTo = _feeTo;
-    }
-
-    function setUpgradeNFT(address _upgradeNFT) external onlyOwner {
-        upgradeNFT = ILand(_upgradeNFT);
-    }
-
-    function setOperator(address _operator) external onlyOwner {
-        operator = _operator;
-    }
-
-    function setPause(bool _val) external onlyOwner {
-        if (_val) {
-            _pause();
+    function buyBox(
+        bytes32 _key,
+        address _tokenPayment,
+        uint256 _tokenAmount,
+        uint256 _boxNumber,
+        uint256 _expiryTime,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    ) external payable {
+        bytes32 msgHash = keccak256(
+            abi.encode(
+                msg.sender,
+                _key,
+                _tokenPayment,
+                _tokenAmount,
+                _boxNumber,
+                _expiryTime
+            )
+        );
+        require(
+            operator == recoverSigner(r, s, v, msgHash),
+            "!invalid operator"
+        );
+        require(maxBoxNumber > currentBoxNumber, "reached the limit");
+        require(!useKeys[_key], "!invalid key");
+        useKeys[_key] = true;
+        currentBoxNumber = currentBoxNumber + 1;
+        if (_tokenPayment == nativeToken) {
+            require(msg.value == _tokenAmount, "Not enough BNB");
         } else {
-            _unpause();
+            IERC20Upgradeable(_tokenPayment).transferFrom(
+                msg.sender,
+                address(this),
+                _tokenAmount
+            );
         }
+
+        buyerBoxNumber[msg.sender] = buyerBoxNumber[msg.sender] + _boxNumber;
+        emit BuyBox(msg.sender, _tokenPayment, _tokenAmount, _boxNumber);
     }
 
-    function claimBoxForUpgradeNFT(
-        bytes32 _claimId,
-        uint256 _tokenId,
-        uint256 _claimFee,
-        uint256 _deadline,
+    function buyBoxMultiToken(
+        bytes32 _key,
+        address[] memory _tokenPayment,
+        uint256[] memory _tokenAmount,
+        uint256 _boxNumber,
+        uint256 _expiryTime,
         bytes32 r,
         bytes32 s,
         uint8 v
     ) external payable {
-        require(!claimIds[_claimId], "already claim");
-        claimIds[_claimId] = true;
-        require(_deadline >= block.timestamp, "deadline");
-
-        require(msg.value >= _claimFee, "insufficient claim fee");
-
-        bytes32 message = keccak256(
+        require(_tokenPayment.length == _tokenAmount.length, "invalid length");
+        bytes32 msgHash = keccak256(
             abi.encode(
-                "claimLand",
                 msg.sender,
-                _claimId,
-                _tokenId,
-                _claimFee,
-                _deadline
+                _tokenPayment,
+                _tokenAmount,
+                _boxNumber,
+                _expiryTime
             )
         );
-
         require(
-            operator == recoverSigner(r, s, v, message),
-            "Invalid operator"
+            operator == recoverSigner(r, s, v, msgHash),
+            "invalid operator"
         );
+        require(maxBoxNumber > currentBoxNumber, "reached the limit");
+        require(!useKeys[_key], "invalid key");
+        useKeys[_key] = true;
+        currentBoxNumber = currentBoxNumber + 1;
+        for (uint256 i = 0; i < _tokenPayment.length; i++) {
+            if (_tokenPayment[i] == nativeToken) {
+                require(msg.value == _tokenAmount[i], "Not enough BNB");
+            } else {
+                IERC20Upgradeable(_tokenPayment[i]).transferFrom(
+                    msg.sender,
+                    address(this),
+                    _tokenAmount[i]
+                );
+            }
+        }
 
-        transferToFeeTo();
-
-        upgradeNFT.mint(msg.sender, _tokenId);
-
-        emit ClaimUpgradeNFT(msg.sender, _tokenId, _claimFee);
+        buyerBoxNumber[msg.sender] = buyerBoxNumber[msg.sender] + _boxNumber;
+        emit BuyBoxMultiToken(
+            msg.sender,
+            abi.encodePacked(_tokenPayment),
+            abi.encodePacked(_tokenAmount),
+            _boxNumber
+        );
     }
 
-    function claimLand(
-        bytes32 _claimId,
-        uint256 _tokenId,
-        uint256 _rarity,
-        uint256 _claimFee,
-        uint256 _deadline,
+    function countNotOpenBox(address buyer) public view returns (uint256) {
+        return buyerBoxNumber[buyer] - buyerBoxOpen[buyer];
+    }
+
+    function openBox(
+        bytes32 _key,
+        bytes32 landName,
+        uint256 _expiryTime,
         bytes32 r,
         bytes32 s,
         uint8 v
-    ) external payable {
-        require(!claimIds[_claimId], "already claim");
-        claimIds[_claimId] = true;
-        require(_deadline >= block.timestamp, "deadline");
-
-        require(msg.value >= _claimFee, "insufficient claim fee");
-
-        bytes32 message = keccak256(
-            abi.encode(
-                "claimLand",
-                msg.sender,
-                _claimId,
-                _tokenId,
-                _rarity,
-                _claimFee,
-                _deadline
-            )
-        );
-
+    ) external {
         require(
-            operator == recoverSigner(r, s, v, message),
-            "Invalid operator"
+            buyerBoxOpen[msg.sender] < buyerBoxNumber[msg.sender],
+            "Dont have any box"
+        );
+        require(!useKeys[_key], "invalid key");
+        useKeys[_key] = true;
+
+        bytes32 msgHash = keccak256(
+            abi.encode(msg.sender, landName, _expiryTime)
+        );
+        require(
+            operator == recoverSigner(r, s, v, msgHash),
+            "invalid operator"
         );
 
-        transferToFeeTo();
+        buyerBoxOpen[msg.sender] = buyerBoxOpen[msg.sender] + 1;
+        land.mint(msg.sender, maxLandId);
 
-        land.mint(msg.sender, _tokenId);
-
-        emit ClaimLand(msg.sender, _tokenId, _rarity, _claimFee);
+        emit OpenBox(msg.sender, maxLandId, landName);
+        maxLandId = maxLandId + 1;
     }
 
-    function transferToFeeTo() internal {
-        if (address(this).balance > 0) {
-            feeTo.sendValue(address(this).balance);
-        }
+    function claimLandFromOther(
+        bytes32 _key,
+        bytes32 landName,
+        uint256 _expiryTime,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    ) external {
+        bytes32 msgHash = keccak256(
+            abi.encode(msg.sender, _key, landName, _expiryTime)
+        );
+        require(
+            operator == recoverSigner(r, s, v, msgHash),
+            "invalid operator"
+        );
+        require(!useKeys[_key], "invalid key");
+        useKeys[_key] = true;
+
+        land.mint(msg.sender, maxLandId);
+
+        emit OpenBox(msg.sender, maxLandId, landName);
+        maxLandId = maxLandId + 1;
     }
 
     function withdrawEther(address payable receiver, uint256 amount)
