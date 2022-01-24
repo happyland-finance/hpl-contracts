@@ -1,5 +1,5 @@
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -9,17 +9,20 @@ import "../interfaces/ILand.sol";
 import "../lib/SignerRecover.sol";
 import "../lib/BlackholePreventionUpgradeable.sol";
 
-contract LandSale is
+contract LandSale is Upgradeable,
     BlackholePreventionUpgradeable,
-    SignerRecover,
-    Upgradeable
+    SignerRecover
+
 {
+    using AddressUpgradeable for address payable;
     ILand public land;
     mapping(address => bool) public acceptToken;
     address public constant nativeToken =
         0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF;
     address public operator;
     uint256 public maxLandId;
+    uint256 public maxBoxNumber;
+    uint256 public currentBoxNumber;
 
     event BuyBox(
         address buyer,
@@ -42,7 +45,7 @@ contract LandSale is
     }
     mapping(address => uint256) public buyerBoxNumber;
     mapping(address => uint256) public buyerBoxOpen;
-    mapping(address => OpenLandInfo) public openLandInfo;
+    mapping(bytes32 => bool) public useKeys;
 
     function initialize(ILand _land) external initializer {
         initOwner();
@@ -51,8 +54,16 @@ contract LandSale is
         maxLandId = 1;
     }
 
+    function setLandAddress(ILand _land) public onlyOwner {
+        land = _land;
+    }
+
     function setMaxLandId(uint256 max) public onlyOwner {
         maxLandId = max;
+    }
+
+    function setMaxBoxNumber(uint256 max) public onlyOwner {
+        maxBoxNumber = max;
     }
 
     function addTokenAccept(address _token, bool _value) public onlyOwner {
@@ -64,6 +75,7 @@ contract LandSale is
     }
 
     function buyBox(
+        bytes32 _key,
         address _tokenPayment,
         uint256 _tokenAmount,
         uint256 _boxNumber,
@@ -75,6 +87,7 @@ contract LandSale is
         bytes32 msgHash = keccak256(
             abi.encode(
                 msg.sender,
+                _key,
                 _tokenPayment,
                 _tokenAmount,
                 _boxNumber,
@@ -83,12 +96,16 @@ contract LandSale is
         );
         require(
             operator == recoverSigner(r, s, v, msgHash),
-            "invalid operator"
+            "!invalid operator"
         );
+        require(maxBoxNumber > currentBoxNumber, "reached the limit");
+        require(!useKeys[_key], "!invalid key");
+        useKeys[_key] = true;
+        currentBoxNumber = currentBoxNumber + 1;
         if (_tokenPayment == nativeToken) {
             require(msg.value == _tokenAmount, "Not enough BNB");
         } else {
-            IERC20(_tokenPayment).transferFrom(
+            IERC20Upgradeable(_tokenPayment).transferFrom(
                 msg.sender,
                 address(this),
                 _tokenAmount
@@ -100,6 +117,7 @@ contract LandSale is
     }
 
     function buyBoxMultiToken(
+        bytes32 _key,
         address[] memory _tokenPayment,
         uint256[] memory _tokenAmount,
         uint256 _boxNumber,
@@ -122,11 +140,15 @@ contract LandSale is
             operator == recoverSigner(r, s, v, msgHash),
             "invalid operator"
         );
+        require(maxBoxNumber > currentBoxNumber, "reached the limit");
+        require(!useKeys[_key], "invalid key");
+        useKeys[_key] = true;
+        currentBoxNumber = currentBoxNumber + 1;
         for (uint256 i = 0; i < _tokenPayment.length; i++) {
             if (_tokenPayment[i] == nativeToken) {
                 require(msg.value == _tokenAmount[i], "Not enough BNB");
             } else {
-                IERC20(_tokenPayment[i]).transferFrom(
+                IERC20Upgradeable(_tokenPayment[i]).transferFrom(
                     msg.sender,
                     address(this),
                     _tokenAmount[i]
@@ -148,6 +170,7 @@ contract LandSale is
     }
 
     function openBox(
+        bytes32 _key,
         bytes32 landName,
         uint256 _expiryTime,
         bytes32 r,
@@ -158,6 +181,8 @@ contract LandSale is
             buyerBoxOpen[msg.sender] < buyerBoxNumber[msg.sender],
             "Dont have any box"
         );
+        require(!useKeys[_key], "invalid key");
+        useKeys[_key] = true;
 
         bytes32 msgHash = keccak256(
             abi.encode(msg.sender, landName, _expiryTime)
@@ -175,6 +200,7 @@ contract LandSale is
     }
 
     function claimLandFromOther(
+        bytes32 _key,
         bytes32 landName,
         uint256 _expiryTime,
         bytes32 r,
@@ -182,12 +208,14 @@ contract LandSale is
         uint8 v
     ) external {
         bytes32 msgHash = keccak256(
-            abi.encode(msg.sender, landName, _expiryTime)
+            abi.encode(msg.sender, _key, landName, _expiryTime)
         );
         require(
             operator == recoverSigner(r, s, v, msgHash),
             "invalid operator"
         );
+        require(!useKeys[_key], "invalid key");
+        useKeys[_key] = true;
 
         land.mint(msg.sender, maxLandId);
 
