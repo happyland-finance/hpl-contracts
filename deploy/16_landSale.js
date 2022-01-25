@@ -29,6 +29,7 @@ module.exports = async (hre) => {
 
   if (parseInt(chainId) == 31337) return
 
+  let hplAddress = require(`../deployments/${chainId}/HPL.json`).address
   let landAddress = require(`../deployments/${chainId}/Land.json`).address
 
   log('Deploying LandSale...')
@@ -51,6 +52,14 @@ module.exports = async (hre) => {
   log('\n  Contract Deployment Data saved to "deployments" directory.')
 
   log('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n')
+  
+  log('\n  LandSale set operator.')
+  await landSale.setOperator('0x0b4d496fcdbcd5b1f696946276d61e13c441eca2')
+  log('\n  LandSale set token payment.')
+  await landSale.addTokenAccept('0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF', true)
+  await landSale.addTokenAccept(hplAddress, true)
+  log('\n  LandSale set max Box.')
+  await landSale.setMaxBoxNumber(1000)
 }
 
 module.exports.tags = ['landsale']
