@@ -46,6 +46,7 @@ contract LandSale is
     mapping(address => uint256) public buyerBoxNumber;
     mapping(address => uint256) public buyerBoxOpen;
     mapping(bytes32 => bool) public useKeys;
+    mapping(address => uint256) public buyerMaxBoxNumber;
 
     function initialize(ILand _land) external initializer {
         initOwner();
@@ -75,10 +76,10 @@ contract LandSale is
     }
 
     function buyBox(
-        bytes32 _key,
         address _tokenPayment,
         uint256 _tokenAmount,
         uint256 _boxNumber,
+        uint256 _maxBoxNumber,
         uint256 _expiryTime,
         bytes32 r,
         bytes32 s,
@@ -87,40 +88,38 @@ contract LandSale is
         bytes32 msgHash = keccak256(
             abi.encode(
                 msg.sender,
-                _key,
                 _tokenPayment,
                 _tokenAmount,
                 _boxNumber,
+                _maxBoxNumber,
                 _expiryTime
             )
         );
         require(
             operator == recoverSigner(r, s, v, msgHash),
-            "!invalid operator"
+            "invalid operator"
         );
-        require(maxBoxNumber > currentBoxNumber, "reached the limit");
-        require(!useKeys[_key], "!invalid key");
-        useKeys[_key] = true;
-        currentBoxNumber = currentBoxNumber + 1;
+        require(maxBoxNumber >= currentBoxNumber, "reached the limit");
+        require(maxBoxNumber >= currentBoxNumber + _boxNumber, "boxNumber too much");
+        require(buyerBoxNumber[msg.sender] + _boxNumber <= _maxBoxNumber, "invalid boxNumber");
+        currentBoxNumber = currentBoxNumber + _boxNumber;
+        uint256 amount = _tokenAmount * _boxNumber;
         if (_tokenPayment == nativeToken) {
-            require(msg.value == _tokenAmount, "Not enough BNB");
+            require(msg.value == amount, "Not enough BNB");
         } else {
-            IERC20Upgradeable(_tokenPayment).transferFrom(
-                msg.sender,
-                address(this),
-                _tokenAmount
-            );
+            IERC20Upgradeable(_tokenPayment).transferFrom(msg.sender, address(this), amount);
         }
 
+        buyerMaxBoxNumber[msg.sender] = _maxBoxNumber;
         buyerBoxNumber[msg.sender] = buyerBoxNumber[msg.sender] + _boxNumber;
         emit BuyBox(msg.sender, _tokenPayment, _tokenAmount, _boxNumber);
     }
 
     function buyBoxMultiToken(
-        bytes32 _key,
         address[] memory _tokenPayment,
         uint256[] memory _tokenAmount,
         uint256 _boxNumber,
+        uint256 _maxBoxNumber,
         uint256 _expiryTime,
         bytes32 r,
         bytes32 s,
@@ -133,6 +132,7 @@ contract LandSale is
                 _tokenPayment,
                 _tokenAmount,
                 _boxNumber,
+                _maxBoxNumber,
                 _expiryTime
             )
         );
@@ -141,21 +141,18 @@ contract LandSale is
             "invalid operator"
         );
         require(maxBoxNumber > currentBoxNumber, "reached the limit");
-        require(!useKeys[_key], "!invalid key");
-        useKeys[_key] = true;
-        currentBoxNumber = currentBoxNumber + 1;
+        require(buyerBoxNumber[msg.sender] + _boxNumber <= _maxBoxNumber, "invalid boxNumber");
+        currentBoxNumber = currentBoxNumber + _boxNumber;
         for (uint256 i = 0; i < _tokenPayment.length; i++) {
+            uint256 amount = _tokenAmount[i] * _boxNumber;
             if (_tokenPayment[i] == nativeToken) {
-                require(msg.value == _tokenAmount[i], "Not enough BNB");
+                require(msg.value == amount, "Not enough BNB");
             } else {
-                IERC20Upgradeable(_tokenPayment[i]).transferFrom(
-                    msg.sender,
-                    address(this),
-                    _tokenAmount[i]
-                );
+                IERC20Upgradeable(_tokenPayment[i]).transferFrom(msg.sender, address(this), amount);
             }
         }
 
+        buyerMaxBoxNumber[msg.sender] = _maxBoxNumber;
         buyerBoxNumber[msg.sender] = buyerBoxNumber[msg.sender] + _boxNumber;
         emit BuyBoxMultiToken(
             msg.sender,
