@@ -259,6 +259,11 @@
   {
     "inputs": [
       {
+        "internalType": "bytes32",
+        "name": "_key",
+        "type": "bytes32"
+      },
+      {
         "internalType": "address",
         "name": "_tokenPayment",
         "type": "address"
@@ -301,6 +306,11 @@
   },
   {
     "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "_key",
+        "type": "bytes32"
+      },
       {
         "internalType": "address[]",
         "name": "_tokenPayment",
@@ -384,6 +394,11 @@
     "inputs": [
       {
         "internalType": "bytes32",
+        "name": "_key",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
         "name": "landName",
         "type": "bytes32"
       },
@@ -433,6 +448,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "currentBoxNumber",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "contract ILand",
@@ -453,6 +481,19 @@
         "internalType": "contract ILand",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxBoxNumber",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -488,6 +529,11 @@
     "inputs": [
       {
         "internalType": "bytes32",
+        "name": "_key",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
         "name": "landName",
         "type": "bytes32"
       },
@@ -515,35 +561,6 @@
     "name": "openBox",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "openLandInfo",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "package",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "landName",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -575,6 +592,32 @@
   {
     "inputs": [],
     "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "contract ILand",
+        "name": "_land",
+        "type": "address"
+      }
+    ],
+    "name": "setLandAddress",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "max",
+        "type": "uint256"
+      }
+    ],
+    "name": "setMaxBoxNumber",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -647,6 +690,25 @@
     "name": "upgradeToAndCall",
     "outputs": [],
     "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "name": "useKeys",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {

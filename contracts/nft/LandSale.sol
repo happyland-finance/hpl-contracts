@@ -9,10 +9,10 @@ import "../interfaces/ILand.sol";
 import "../lib/SignerRecover.sol";
 import "../lib/BlackholePreventionUpgradeable.sol";
 
-contract LandSale is Upgradeable,
+contract LandSale is
+    Upgradeable,
     BlackholePreventionUpgradeable,
     SignerRecover
-
 {
     using AddressUpgradeable for address payable;
     ILand public land;
@@ -141,7 +141,7 @@ contract LandSale is Upgradeable,
             "invalid operator"
         );
         require(maxBoxNumber > currentBoxNumber, "reached the limit");
-        require(!useKeys[_key], "invalid key");
+        require(!useKeys[_key], "!invalid key");
         useKeys[_key] = true;
         currentBoxNumber = currentBoxNumber + 1;
         for (uint256 i = 0; i < _tokenPayment.length; i++) {
@@ -181,7 +181,7 @@ contract LandSale is Upgradeable,
             buyerBoxOpen[msg.sender] < buyerBoxNumber[msg.sender],
             "Dont have any box"
         );
-        require(!useKeys[_key], "invalid key");
+        require(!useKeys[_key], "!!invalid key");
         useKeys[_key] = true;
 
         bytes32 msgHash = keccak256(

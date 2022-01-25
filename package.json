@@ -8,7 +8,7 @@
   "scripts": {
     "test": "hardhat test --network local",
     "compile": "hardhat compile",
-    "deploy kovan" : "npx hardhat deploy --network kovan"
+    "deploy kovan": "npx hardhat deploy --network kovan"
   },
   "keywords": [
     "hardhat",
@@ -30,7 +30,8 @@
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/contracts": "^4.2.0",
     "@openzeppelin/contracts-upgradeable": "^4.3.2",
-    "@openzeppelin/hardhat-upgrades": "^1.10.0",
+    "@openzeppelin/hardhat-upgrades": "1.10.0",
+    "csv-writer": "^1.6.0",
     "dotenv": "^10.0.0",
     "hardhat-abi-exporter": "^2.2.1",
     "hardhat-deploy": "^0.8.11",
