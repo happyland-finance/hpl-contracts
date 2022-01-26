@@ -36,17 +36,17 @@ contract LandSale is
         bytes tokenAmount,
         uint256 boxNumber
     );
-    event OpenBox(address buyer, uint256 tokenId, bytes32 landName);
+    event OpenBox(address buyer, uint256 tokenId, bytes32 commitment);
 
-    struct OpenLandInfo {
-        bytes32 package;
+    struct BuyerLastToken {
         uint256 tokenId;
-        bytes32 landName;
+        bytes32 commitment;
     }
     mapping(address => uint256) public buyerBoxNumber;
     mapping(address => uint256) public buyerBoxOpen;
     mapping(bytes32 => bool) public useKeys;
     mapping(address => uint256) public buyerMaxBoxNumber;
+    mapping(address => BuyerLastToken) public buyerLastTokenId;
 
     function initialize(ILand _land) external initializer {
         initOwner();
@@ -67,8 +67,14 @@ contract LandSale is
         maxBoxNumber = max;
     }
 
-    function addTokenAccept(address _token, bool _value) public onlyOwner {
+    function updateTokenAccept(address _token, bool _value) public onlyOwner {
         acceptToken[_token] = _value;
+    }
+
+    function updateMultiTokenAccept(address[] memory _tokens, bool _value) public onlyOwner {
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            acceptToken[_tokens[i]] = _value;
+        }
     }
 
     function setOperator(address _operator) public onlyOwner {
@@ -168,7 +174,7 @@ contract LandSale is
 
     function openBox(
         bytes32 _key,
-        bytes32 landName,
+        bytes32 _commitment,
         uint256 _expiryTime,
         bytes32 r,
         bytes32 s,
@@ -182,7 +188,7 @@ contract LandSale is
         useKeys[_key] = true;
 
         bytes32 msgHash = keccak256(
-            abi.encode(msg.sender, landName, _expiryTime)
+            abi.encode(msg.sender, _key, _commitment, _expiryTime)
         );
         require(
             operator == recoverSigner(r, s, v, msgHash),
@@ -192,20 +198,22 @@ contract LandSale is
         buyerBoxOpen[msg.sender] = buyerBoxOpen[msg.sender] + 1;
         land.mint(msg.sender, maxLandId);
 
-        emit OpenBox(msg.sender, maxLandId, landName);
+        buyerLastTokenId[msg.sender].tokenId = maxLandId;
+        buyerLastTokenId[msg.sender].commitment = _commitment;
+        emit OpenBox(msg.sender, maxLandId, _commitment);
         maxLandId = maxLandId + 1;
     }
 
     function claimLandFromOther(
         bytes32 _key,
-        bytes32 landName,
+        bytes32 _commitment,
         uint256 _expiryTime,
         bytes32 r,
         bytes32 s,
         uint8 v
     ) external {
         bytes32 msgHash = keccak256(
-            abi.encode(msg.sender, _key, landName, _expiryTime)
+            abi.encode(msg.sender, _key, _commitment, _expiryTime)
         );
         require(
             operator == recoverSigner(r, s, v, msgHash),
@@ -216,7 +224,9 @@ contract LandSale is
 
         land.mint(msg.sender, maxLandId);
 
-        emit OpenBox(msg.sender, maxLandId, landName);
+        buyerLastTokenId[msg.sender].tokenId = maxLandId;
+        buyerLastTokenId[msg.sender].commitment = _commitment;
+        emit OpenBox(msg.sender, maxLandId, _commitment);
         maxLandId = maxLandId + 1;
     }
 
