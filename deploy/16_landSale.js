@@ -34,13 +34,11 @@ module.exports = async (hre) => {
 
   log('Deploying LandSale...')
   const LandSale = await ethers.getContractFactory('LandSale')
-  const landSale = await upgrades.deployProxy(
-      LandSale,
-    [
-      landAddress,
-    ],
-    { unsafeAllow: ['delegatecall'], kind: 'uups', gasLimit: 1000000 },
-  )
+  const landSale = await upgrades.deployProxy(LandSale, [landAddress], {
+    unsafeAllow: ['delegatecall'],
+    kind: 'uups',
+    gasLimit: 1000000,
+  })
   log('LandSale address : ', landSale.address)
   deployData['LandSale'] = {
     abi: getContractAbi('LandSale'),
@@ -48,25 +46,27 @@ module.exports = async (hre) => {
     deployTransaction: landSale.deployTransaction,
   }
 
-  saveDeploymentData(chainId, deployData)
-  log('\n  Contract Deployment Data saved to "deployments" directory.')
-
   log('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n')
 
   log('\n  LandSale set operator.')
-  await landSale.setOperator('0x0b4d496fcdbcd5b1f696946276d61e13c441eca2')
+  await landSale.setOperator(constants.getOperator(chainId))
   log('\n  LandSale set token payment.')
-  await landSale.updateMultiTokenAccept(['0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF', '0xe9e7cea3dedca5984780bafc599bd69add087d56', hplAddress], true)
+  await landSale.updateMultiTokenAccept(
+    constants.getLandSalePaymentTokens(chainId),
+    true,
+  )
   log('\n  LandSale set max Box.')
   await landSale.setMaxBoxNumber(2000)
   log('\n  LandSale set max tokenId.')
-  await landSale.setMaxLandId(41007)
-
+  await landSale.setMaxLandId(1)
 
   const Land = await ethers.getContractFactory('Land')
   const land = await Land.attach(landAddress)
   log('setFactory Land...')
   await land.setFactory(landSale.address)
+
+  saveDeploymentData(chainId, deployData)
+  log('\n  Contract Deployment Data saved to "deployments" directory.')
 }
 
 module.exports.tags = ['landsale']

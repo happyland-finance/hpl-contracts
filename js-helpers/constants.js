@@ -50,7 +50,19 @@ module.exports = {
     return '0x4fb99590ca95fc3255d9fa66a1ca46c43c34b09a' //banana on bsc testnet
   },
   getOperator: function (chainId) {
-    //TODO: change based on chainId
-    return '0xe9e7cea3dedca5984780bafc599bd69add087d56'
+    return '0x0b4d496fcdbcd5b1f696946276d61e13c441eca2'
+  },
+  getLandSalePaymentTokens: function (chainId) {
+    if (chainId == 56) {
+      return [
+        '0xe9e7cea3dedca5984780bafc599bd69add087d56',
+        '0x0d0621aD4EC89Da1cF0F371d6205229f04bCb378',
+      ]
+    }
+    //todo: check for testnet
+    return [
+      '0xe9e7cea3dedca5984780bafc599bd69add087d56',
+      '0x0d0621aD4EC89Da1cF0F371d6205229f04bCb378',
+    ]
   },
 }
