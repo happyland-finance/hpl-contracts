@@ -1,5 +1,6 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -15,6 +16,7 @@ contract LandSale is
     SignerRecover
 {
     using AddressUpgradeable for address payable;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     ILand public land;
     mapping(address => bool) public acceptToken;
     address public constant nativeToken =
@@ -113,7 +115,7 @@ contract LandSale is
         if (_tokenPayment == nativeToken) {
             require(msg.value == amount, "Not enough BNB");
         } else {
-            IERC20Upgradeable(_tokenPayment).transferFrom(msg.sender, address(this), amount);
+            IERC20Upgradeable(_tokenPayment).safeTransferFrom(msg.sender, address(this), amount);
         }
 
         buyerMaxBoxNumber[msg.sender] = _maxBoxNumber;
@@ -154,7 +156,7 @@ contract LandSale is
             if (_tokenPayment[i] == nativeToken) {
                 require(msg.value == amount, "Not enough BNB");
             } else {
-                IERC20Upgradeable(_tokenPayment[i]).transferFrom(msg.sender, address(this), amount);
+                IERC20Upgradeable(_tokenPayment[i]).safeTransferFrom(msg.sender, address(this), amount);
             }
         }
 
