@@ -56,6 +56,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     mapping(address => UserInfoTokenWithdraw) public userInfoTokenWithdraw;
 
     uint256 public minTimeBetweenClaims;
+    uint256 public contractStartAt;
 
     function initialize(
         IERC20Upgradeable _hpl,
@@ -64,7 +65,8 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     ) external initializer {
         initOwner();
 
-        minTimeBetweenClaims = 1 hours;
+        minTimeBetweenClaims = 10 days;
+        contractStartAt = block.timestamp;
 
         hpl = _hpl;
         hpw = _hpw;
@@ -76,6 +78,10 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         onlyOwner
     {
         minTimeBetweenClaims = _minTimeBetweenClaims;
+    }
+
+    function setContractStart() external onlyOwner {
+        contractStartAt = block.timestamp;
     }
 
     function setOperator(address _op) external onlyOwner {
@@ -229,9 +235,11 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             "invalid operator"
         );
         UserInfo storage _user = userInfo[msg.sender];
-
+        uint256 _lastRewardClaimedAt = _user.lastRewardClaimedAt > 0
+            ? _user.lastRewardClaimedAt
+            : contractStartAt;
         require(
-            _user.lastRewardClaimedAt + minTimeBetweenClaims < block.timestamp,
+            _lastRewardClaimedAt + minTimeBetweenClaims < block.timestamp,
             "!minTimeBetweenClaims"
         );
         require(_user.hplRewardClaimed <= _hplRewards, "invalid _hplRewards");

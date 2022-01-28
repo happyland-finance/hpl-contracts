@@ -241,6 +241,24 @@
   {
     "inputs": [
       {
+        "internalType": "address[]",
+        "name": "_buyers",
+        "type": "address[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_boxNumbers",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "addBoxByOwner",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "_tokenPayment",
         "type": "address"
