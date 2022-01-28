@@ -123,6 +123,19 @@ contract LandSale is
         emit BuyBox(msg.sender, _tokenPayment, _tokenAmount, _boxNumber);
     }
 
+    function addBoxByOwner(
+        address[] memory _buyers,
+        uint256[] memory _boxNumbers
+    ) external onlyOwner {
+        require(_buyers.length == _boxNumbers.length, "invalid length");
+
+        for (uint256 i = 0; i < _buyers.length; i++) {
+            buyerMaxBoxNumber[_buyers[i]] += _boxNumbers[i];
+            buyerBoxNumber[_buyers[i]] += _boxNumbers[i];
+            emit BuyBox(_buyers[i], address(0), 0, _boxNumbers[i]);
+        }
+    }
+
     function buyBoxMultiToken(
         address[] memory _tokenPayment,
         uint256[] memory _tokenAmount,
