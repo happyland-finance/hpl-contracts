@@ -240,8 +240,12 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             "invalid operator"
         );
         UserInfo storage _user = userInfo[msg.sender];
+        uint256 lastUpdatedAt = _user.lastUpdatedAt;
         uint256 _lastRewardClaimedAt = _user.lastRewardClaimedAt > 0
             ? _user.lastRewardClaimedAt
+            : lastUpdatedAt;
+        _lastRewardClaimedAt = _lastRewardClaimedAt > 0
+            ? _lastRewardClaimedAt
             : contractStartAt;
         require(
             _lastRewardClaimedAt + minTimeBetweenClaims < block.timestamp,
