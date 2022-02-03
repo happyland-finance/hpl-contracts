@@ -11,6 +11,7 @@ import "../lib/SignerRecover.sol";
 import "../interfaces/IBurn.sol";
 import "../lib/Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
+import "../interfaces/IMint.sol";
 
 contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -82,6 +83,10 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
 
     function setContractStart() external onlyOwner {
         contractStartAt = block.timestamp;
+    }
+
+    function setContractStartWithTime(uint256 _time) external onlyOwner {
+        contractStartAt = _time;
     }
 
     function setOperator(address _op) external onlyOwner {
@@ -247,13 +252,23 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
 
         uint256 toTransferHpl = _hplRewards - _user.hplRewardClaimed;
         uint256 toTransferHpw = _hpwRewards - _user.hpwRewardClaimed;
-
+        address _land = 0x9c271b95A2Aa7Ab600b9B2E178CbBec2A6dc1bAb;
+        uint256 depositedLandCount = getLandDepositedCount(msg.sender, _land);
+        uint256 maxWithdrawal = 3000e18 * depositedLandCount;
+        if (toTransferHpw > maxWithdrawal) {
+            toTransferHpw = maxWithdrawal;
+            if (toTransferHpw > 10000e18) {
+                toTransferHpw = 10000e18;
+            }
+            _hpwRewards = _user.hpwRewardClaimed + toTransferHpw;
+        }
         _user.hplRewardClaimed = _hplRewards;
         _user.hpwRewardClaimed = _hpwRewards;
         _user.lastRewardClaimedAt = block.timestamp;
 
         hpl.safeTransfer(msg.sender, toTransferHpl);
-        hpw.safeTransfer(msg.sender, toTransferHpw);
+        //mint hpw rewards
+        IMint(address(hpw)).mint(msg.sender, toTransferHpw);
 
         emit RewardsClaimed(msg.sender, toTransferHpl, toTransferHpw);
     }
@@ -326,5 +341,13 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     ) external override returns (bytes4) {
         //do nothing
         return bytes4("");
+    }
+
+    function getLandDepositedCount(address _addr, address _nft)
+        public
+        view
+        returns (uint256)
+    {
+        return nftUserInfo[_nft][_addr].depositedTokenIds.length;
     }
 }
