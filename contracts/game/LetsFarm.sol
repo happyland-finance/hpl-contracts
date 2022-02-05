@@ -98,6 +98,10 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     {
         hpl.safeTransferFrom(msg.sender, address(this), _hplAmount);
         hpw.safeTransferFrom(msg.sender, address(this), _hpwAmount);
+        if (userInfo[msg.sender].lastUpdatedAt == 0) {
+            //first time deposit, set lastRewardClaimedAt to current time
+            userInfo[msg.sender].lastRewardClaimedAt = block.timestamp;
+        }
         userInfo[msg.sender].hplDeposit += _hplAmount;
         userInfo[msg.sender].hpwDeposit += _hpwAmount;
         userInfo[msg.sender].lastUpdatedAt = block.timestamp;
@@ -116,6 +120,11 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             );
             _user.depositedTokenIds.push(_tokenIds[i]);
             _user.tokenIdToIndex[_tokenIds[i]] = _user.depositedTokenIds.length;
+        }
+
+        if (userInfo[msg.sender].lastUpdatedAt == 0) {
+            //first time deposit, set lastRewardClaimedAt to current time
+            userInfo[msg.sender].lastRewardClaimedAt = block.timestamp;
         }
 
         userInfo[msg.sender].lastUpdatedAt = block.timestamp;
@@ -240,10 +249,8 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             "invalid operator"
         );
         UserInfo storage _user = userInfo[msg.sender];
-        uint256 lastUpdatedAt = _user.lastUpdatedAt;
-        uint256 _lastRewardClaimedAt = _user.lastRewardClaimedAt > 0
-            ? _user.lastRewardClaimedAt
-            : lastUpdatedAt;
+        //uint256 lastUpdatedAt = _user.lastUpdatedAt;
+        uint256 _lastRewardClaimedAt = _user.lastRewardClaimedAt;
         _lastRewardClaimedAt = _lastRewardClaimedAt > 0
             ? _lastRewardClaimedAt
             : contractStartAt;
