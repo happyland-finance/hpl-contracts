@@ -59,6 +59,11 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     uint256 public minTimeBetweenClaims;
     uint256 public contractStartAt;
 
+    struct UserInfoTokenSpend {
+        uint256 totalRecordedHPLSpent;
+        uint256 totalRecordedHPWSpent;
+    }
+
     function initialize(
         IERC20Upgradeable _hpl,
         IERC20Upgradeable _hpw,
@@ -94,7 +99,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     }
 
     function depositTokensToPlay(uint256 _hplAmount, uint256 _hpwAmount)
-        external
+        public
     {
         hpl.safeTransferFrom(msg.sender, address(this), _hplAmount);
         hpw.safeTransferFrom(msg.sender, address(this), _hpwAmount);
@@ -239,7 +244,18 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         bytes32 r,
         bytes32 s,
         uint8 v
-    ) external {
+    ) public {
+        _claimRewardsInternal(_hplRewards, _hpwRewards, _expiredTime, r, s, v);
+    }
+
+    function _claimRewardsInternal(
+        uint256 _hplRewards,
+        uint256 _hpwRewards,
+        uint256 _expiredTime,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    ) internal returns (uint256, uint256) {
         require(block.timestamp < _expiredTime, "claimRewards: !expired");
         bytes32 msgHash = keccak256(
             abi.encode(msg.sender, _hplRewards, _hpwRewards, _expiredTime)
@@ -264,6 +280,17 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         uint256 toTransferHpl = _hplRewards - _user.hplRewardClaimed;
         uint256 toTransferHpw = _hpwRewards - _user.hpwRewardClaimed;
         address _land = 0x9c271b95A2Aa7Ab600b9B2E178CbBec2A6dc1bAb;
+        {
+            uint256 _chainId = getChainId();
+            if (_chainId == 97) {
+                _land = 0x03524a0561f20Cd4cE73EAE1057cFa29B29C40D1;
+            } else if (_chainId == 56) {
+                //do nothing
+            } else {
+                revert("unsupported chain");
+            }
+        }
+
         uint256 depositedLandCount = getLandDepositedCount(msg.sender, _land);
         uint256 maxWithdrawal = 3000e18 * depositedLandCount;
         if (toTransferHpw > maxWithdrawal) {
@@ -282,6 +309,30 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         IMint(address(hpw)).mint(msg.sender, toTransferHpw);
 
         emit RewardsClaimed(msg.sender, toTransferHpl, toTransferHpw);
+        return (toTransferHpl, toTransferHpw);
+    }
+
+    function claimRewardsAndDeposit(
+        uint256 _hplRewards,
+        uint256 _hpwRewards,
+        uint256 _expiredTime,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    ) external {
+        (
+            uint256 _claimedHPLAmount,
+            uint256 _claimedHPWAmount
+        ) = _claimRewardsInternal(
+                _hplRewards,
+                _hpwRewards,
+                _expiredTime,
+                r,
+                s,
+                v
+            );
+        //deposit again
+        depositTokensToPlay(_claimedHPLAmount, _claimedHPWAmount);
     }
 
     function getUserInfo(address _user)
@@ -360,5 +411,13 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         returns (uint256)
     {
         return nftUserInfo[_nft][_addr].depositedTokenIds.length;
+    }
+
+    function getChainId() public view returns (uint256) {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        return chainId;
     }
 }
