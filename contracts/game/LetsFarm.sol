@@ -64,6 +64,8 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         uint256 totalRecordedHPWSpent;
     }
 
+    mapping(address => UserInfoTokenSpend) public userInfoTokenSpend;
+
     function initialize(
         IERC20Upgradeable _hpl,
         IERC20Upgradeable _hpw,
@@ -226,8 +228,27 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         hpw.safeTransfer(msg.sender, _hpwWithdrawAmount);
 
         //burn hplSpent and hpwSpent
-        // IBurn(address(hpl)).burn(_hplSpent);
-        // IBurn(address(hpw)).burn(_hpwSpent);
+        {
+            require(
+                _hplSpent >=
+                    userInfoTokenSpend[msg.sender].totalRecordedHPLSpent,
+                "!userInfoTokenSpend hpl"
+            );
+            require(
+                _hpwSpent >=
+                    userInfoTokenSpend[msg.sender].totalRecordedHPWSpent,
+                "!userInfoTokenSpend hpw"
+            );
+
+            IBurn(address(hpl)).burn(
+                _hplSpent - userInfoTokenSpend[msg.sender].totalRecordedHPLSpent
+            );
+            userInfoTokenSpend[msg.sender].totalRecordedHPLSpent = _hplSpent;
+            IBurn(address(hpw)).burn(
+                _hpwSpent - userInfoTokenSpend[msg.sender].totalRecordedHPWSpent
+            );
+            userInfoTokenSpend[msg.sender].totalRecordedHPWSpent = _hpwSpent;
+        }
 
         emit TokenWithdraw(msg.sender, _hplWithdrawAmount, _hpwWithdrawAmount);
 

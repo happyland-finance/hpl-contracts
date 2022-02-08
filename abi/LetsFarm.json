@@ -752,6 +752,30 @@
         "type": "address"
       }
     ],
+    "name": "userInfoTokenSpend",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "totalRecordedHPLSpent",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalRecordedHPWSpent",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "name": "userInfoTokenWithdraw",
     "outputs": [
       {
