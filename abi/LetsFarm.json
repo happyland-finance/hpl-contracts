@@ -531,6 +531,64 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_hplRewards",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_hpwRewards",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_expiredTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_masterAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address[]",
+        "name": "_scholarAddresses",
+        "type": "address[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_scholarHPLAmounts",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_scholarHPWAmounts",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "r",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "s",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint8",
+        "name": "v",
+        "type": "uint8"
+      }
+    ],
+    "name": "masterDistributeRewards",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "minTimeBetweenClaims",
     "outputs": [
@@ -632,6 +690,30 @@
     "name": "renounceOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "scholarRewards",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "totalHPLReceived",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalHPWReceived",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {

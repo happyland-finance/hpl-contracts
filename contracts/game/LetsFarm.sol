@@ -67,6 +67,12 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     mapping(address => UserInfoTokenSpend) public userInfoTokenSpend;
     mapping(address => mapping(uint256 => uint256)) public nftDepositedTime;
 
+    struct ScholarRewards {
+        uint256 totalHPLReceived;
+        uint256 totalHPWReceived;
+    }
+    mapping(address => ScholarRewards) public scholarRewards;
+
     function initialize(
         IERC20Upgradeable _hpl,
         IERC20Upgradeable _hpw,
@@ -361,6 +367,189 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             );
         //deposit again
         depositTokensToPlay(_claimedHPLAmount, _claimedHPWAmount);
+    }
+
+    function masterDistributeRewards(
+        uint256 _hplRewards, //total
+        uint256 _hpwRewards, //total
+        uint256 _expiredTime,
+        address _masterAddress,
+        address[] memory _scholarAddresses,
+        uint256[] memory _scholarHPLAmounts,
+        uint256[] memory _scholarHPWAmounts,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    ) external {
+        require(
+            block.timestamp < _expiredTime,
+            "masterDistributeRewards: !expired"
+        );
+        bytes32 msgHash = keccak256(
+            abi.encode(
+                _masterAddress,
+                _hplRewards,
+                _hpwRewards,
+                _scholarAddresses,
+                _scholarHPLAmounts,
+                _scholarHPWAmounts,
+                _expiredTime
+            )
+        );
+        require(
+            operator == recoverSigner(r, s, v, msgHash),
+            "invalid operator"
+        );
+
+        _masterDistributeRewardsInternal(
+            _hplRewards,
+            _hpwRewards,
+            _masterAddress,
+            _scholarAddresses,
+            _scholarHPLAmounts,
+            _scholarHPWAmounts
+        );
+    }
+
+    function _masterDistributeRewardsInternal(
+        uint256 _hplRewards, //total
+        uint256 _hpwRewards, //total
+        address _masterAddress,
+        address[] memory _scholarAddresses,
+        uint256[] memory _scholarHPLAmounts,
+        uint256[] memory _scholarHPWAmounts
+    ) internal {
+        require(
+            _scholarAddresses.length == _scholarHPLAmounts.length &&
+                _scholarHPLAmounts.length == _scholarHPWAmounts.length,
+            "!invalid input array lengths"
+        );
+        //compute total rewards to distribute
+        UserInfo storage _user = userInfo[_masterAddress];
+        //uint256 lastUpdatedAt = _user.lastUpdatedAt;
+        uint256 _lastRewardClaimedAt = _user.lastRewardClaimedAt;
+        _lastRewardClaimedAt = _lastRewardClaimedAt > 0
+            ? _lastRewardClaimedAt
+            : contractStartAt;
+        require(
+            _lastRewardClaimedAt + minTimeBetweenClaims < block.timestamp,
+            "!minTimeBetweenClaims"
+        );
+        require(_user.hplRewardClaimed <= _hplRewards, "invalid _hplRewards");
+        require(_user.hpwRewardClaimed <= _hpwRewards, "invalid _hpwRewards");
+
+        uint256 toTransferHpl = _hplRewards - _user.hplRewardClaimed;
+        uint256 toTransferHpw = _hpwRewards - _user.hpwRewardClaimed;
+        address _land = 0x9c271b95A2Aa7Ab600b9B2E178CbBec2A6dc1bAb;
+        {
+            uint256 _chainId = getChainId();
+            if (_chainId == 97) {
+                _land = 0x03524a0561f20Cd4cE73EAE1057cFa29B29C40D1;
+            } else if (_chainId == 56) {
+                //do nothing
+            } else {
+                revert("unsupported chain");
+            }
+        }
+
+        uint256 depositedLandCount = getLandDepositedCount(msg.sender, _land);
+        uint256 maxWithdrawal = depositedLandCount * 3000 * 10**18;
+        //TODO: should we have withdraw cap for guilds?
+        if (maxWithdrawal > 10000 ether) {
+            maxWithdrawal = 10000 ether;
+        }
+        if (toTransferHpw > maxWithdrawal) {
+            toTransferHpw = maxWithdrawal;
+            _hpwRewards = _user.hpwRewardClaimed + toTransferHpw;
+        }
+
+        if (toTransferHpl > maxWithdrawal) {
+            toTransferHpl = maxWithdrawal;
+            _hplRewards = _user.hplRewardClaimed + toTransferHpl;
+        }
+        _user.hplRewardClaimed = _hplRewards;
+        _user.hpwRewardClaimed = _hpwRewards;
+        _user.lastRewardClaimedAt = block.timestamp;
+
+        //distribute hpl
+        if (toTransferHpl > 0) {
+            _distributeHPLToScholars(
+                toTransferHpl,
+                maxWithdrawal,
+                _masterAddress,
+                _scholarAddresses,
+                _scholarHPLAmounts
+            );
+        }
+
+        //distribute hpw
+        if (toTransferHpl > 0) {
+            _distributeHPWToScholars(
+                toTransferHpw,
+                maxWithdrawal,
+                _masterAddress,
+                _scholarAddresses,
+                _scholarHPWAmounts
+            );
+        }
+        emit RewardsClaimed(msg.sender, toTransferHpl, toTransferHpw);
+    }
+
+    function _distributeHPLToScholars(
+        uint256 _toTransferHpl, //total
+        uint256 _maxWithdraw,
+        address _masterAddress,
+        address[] memory _scholarAddresses,
+        uint256[] memory _scholarHPLAmounts
+    ) internal {
+        uint256 _totalTransferredHPL = 0;
+        for (uint256 i = 0; i < _scholarAddresses.length; i++) {
+            uint256 _scholarClaimable = _scholarHPLAmounts[i].sub(
+                scholarRewards[_scholarAddresses[i]].totalHPLReceived
+            );
+            _scholarClaimable =
+                (_scholarClaimable * _toTransferHpl) /
+                _maxWithdraw;
+            scholarRewards[_scholarAddresses[i]]
+                .totalHPLReceived += _scholarClaimable;
+            _totalTransferredHPL += _scholarClaimable;
+            hpl.safeTransfer(_scholarAddresses[i], _scholarClaimable);
+        }
+        require(
+            _totalTransferredHPL <= _toTransferHpl,
+            "exceed total allowed hpl rewards transfer"
+        );
+        hpl.safeTransfer(_masterAddress, _toTransferHpl - _totalTransferredHPL);
+    }
+
+    function _distributeHPWToScholars(
+        uint256 _toTransferHpw, //total
+        uint256 _maxWithdraw,
+        address _masterAddress,
+        address[] memory _scholarAddresses,
+        uint256[] memory _scholarHPWAmounts
+    ) internal {
+        uint256 _totalTransferredHPW = 0;
+        for (uint256 i = 0; i < _scholarAddresses.length; i++) {
+            uint256 _scholarClaimable = _scholarHPWAmounts[i].sub(
+                scholarRewards[_scholarAddresses[i]].totalHPWReceived
+            );
+            _scholarClaimable =
+                (_scholarClaimable * _toTransferHpw) /
+                _maxWithdraw;
+            scholarRewards[_scholarAddresses[i]]
+                .totalHPWReceived += _scholarClaimable;
+            _totalTransferredHPW += _scholarClaimable;
+            IMint(address(hpw)).mint(_scholarAddresses[i], _scholarClaimable);
+        }
+        require(
+            _totalTransferredHPW <= _toTransferHpw,
+            "exceed total allowed hpl rewards transfer"
+        );
+        IMint(address(hpw)).mint(
+            _masterAddress,
+            _toTransferHpw - _totalTransferredHPW
+        );
     }
 
     function getUserInfo(address _user)
