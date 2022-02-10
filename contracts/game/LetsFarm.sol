@@ -438,9 +438,12 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         );
         require(_user.hplRewardClaimed <= _hplRewards, "invalid _hplRewards");
         require(_user.hpwRewardClaimed <= _hpwRewards, "invalid _hpwRewards");
-
+        uint256[2] memory maxWithdrawableNow;
         uint256 toTransferHpl = _hplRewards - _user.hplRewardClaimed;
         uint256 toTransferHpw = _hpwRewards - _user.hpwRewardClaimed;
+        maxWithdrawableNow[0] = toTransferHpl;
+        maxWithdrawableNow[1] = toTransferHpw;
+
         address _land = 0x9c271b95A2Aa7Ab600b9B2E178CbBec2A6dc1bAb;
         {
             uint256 _chainId = getChainId();
@@ -476,7 +479,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         if (toTransferHpl > 0) {
             _distributeHPLToScholars(
                 toTransferHpl,
-                maxWithdrawal,
+                maxWithdrawableNow[0],
                 _masterAddress,
                 _scholarAddresses,
                 _scholarHPLAmounts
@@ -487,7 +490,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         if (toTransferHpw > 0) {
             _distributeHPWToScholars(
                 toTransferHpw,
-                maxWithdrawal,
+                maxWithdrawableNow[1],
                 _masterAddress,
                 _scholarAddresses,
                 _scholarHPWAmounts
