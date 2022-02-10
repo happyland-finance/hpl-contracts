@@ -68,6 +68,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     mapping(address => mapping(uint256 => uint256)) public nftDepositedTime;
 
     struct ScholarRewards {
+        address masterWallet;
         uint256 totalHPLReceived;
         uint256 totalHPWReceived;
     }
@@ -375,8 +376,8 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         uint256 _expiredTime,
         address _masterAddress,
         address[] memory _scholarAddresses,
-        uint256[] memory _scholarHPLAmounts,
-        uint256[] memory _scholarHPWAmounts,
+        uint256[] memory _scholarHPLAmounts, //total
+        uint256[] memory _scholarHPWAmounts, //total
         bytes32 r,
         bytes32 s,
         uint8 v
@@ -483,7 +484,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         }
 
         //distribute hpw
-        if (toTransferHpl > 0) {
+        if (toTransferHpw > 0) {
             _distributeHPWToScholars(
                 toTransferHpw,
                 maxWithdrawal,
@@ -504,6 +505,15 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     ) internal {
         uint256 _totalTransferredHPL = 0;
         for (uint256 i = 0; i < _scholarAddresses.length; i++) {
+            require(
+                scholarRewards[_scholarAddresses[i]].masterWallet ==
+                    address(0) ||
+                    scholarRewards[_scholarAddresses[i]].masterWallet ==
+                    _masterAddress,
+                "same scholar, different master"
+            );
+            scholarRewards[_scholarAddresses[i]].masterWallet = _masterAddress;
+
             uint256 _scholarClaimable = _scholarHPLAmounts[i].sub(
                 scholarRewards[_scholarAddresses[i]].totalHPLReceived
             );
@@ -531,6 +541,15 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     ) internal {
         uint256 _totalTransferredHPW = 0;
         for (uint256 i = 0; i < _scholarAddresses.length; i++) {
+            require(
+                scholarRewards[_scholarAddresses[i]].masterWallet ==
+                    address(0) ||
+                    scholarRewards[_scholarAddresses[i]].masterWallet ==
+                    _masterAddress,
+                "same scholar, different master"
+            );
+            scholarRewards[_scholarAddresses[i]].masterWallet = _masterAddress;
+
             uint256 _scholarClaimable = _scholarHPWAmounts[i].sub(
                 scholarRewards[_scholarAddresses[i]].totalHPWReceived
             );

@@ -703,6 +703,11 @@
     "name": "scholarRewards",
     "outputs": [
       {
+        "internalType": "address",
+        "name": "masterWallet",
+        "type": "address"
+      },
+      {
         "internalType": "uint256",
         "name": "totalHPLReceived",
         "type": "uint256"
