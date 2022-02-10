@@ -313,12 +313,12 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         }
 
         uint256 depositedLandCount = getLandDepositedCount(msg.sender, _land);
-        uint256 maxWithdrawal = 3000e18 * depositedLandCount;
+        uint256 maxWithdrawal = depositedLandCount * 3000 * 10**18;
+        if (maxWithdrawal > 10000 ether) {
+            maxWithdrawal = 10000 ether;
+        }
         if (toTransferHpw > maxWithdrawal) {
             toTransferHpw = maxWithdrawal;
-            if (toTransferHpw > 10000e18) {
-                toTransferHpw = 10000e18;
-            }
             _hpwRewards = _user.hpwRewardClaimed + toTransferHpw;
         }
         _user.hplRewardClaimed = _hplRewards;
