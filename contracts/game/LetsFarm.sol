@@ -65,6 +65,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     }
 
     mapping(address => UserInfoTokenSpend) public userInfoTokenSpend;
+    mapping(address => mapping(uint256 => uint256)) public nftDepositedTime;
 
     function initialize(
         IERC20Upgradeable _hpl,
@@ -127,6 +128,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             );
             _user.depositedTokenIds.push(_tokenIds[i]);
             _user.tokenIdToIndex[_tokenIds[i]] = _user.depositedTokenIds.length;
+            nftDepositedTime[_nft][_tokenIds[i]] = block.timestamp;
         }
 
         if (userInfo[msg.sender].lastUpdatedAt == 0) {
@@ -157,6 +159,11 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         );
         DepositedNFT storage _user = nftUserInfo[_nft][msg.sender];
         for (uint256 i = 0; i < _tokenIds.length; i++) {
+            require(
+                nftDepositedTime[_nft][_tokenIds[i]] + 2 * 86400 <=
+                    block.timestamp,
+                "not nft unlock time"
+            );
             require(_user.tokenIdToIndex[_tokenIds[i]] > 0, "invalid tokenId");
             IERC721Upgradeable(_nft).transferFrom(
                 address(this),
