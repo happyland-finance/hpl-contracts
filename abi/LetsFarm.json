@@ -401,6 +401,30 @@
   {
     "inputs": [
       {
+        "internalType": "address[]",
+        "name": "_scholars",
+        "type": "address[]"
+      }
+    ],
+    "name": "getScholarRewardsClaimed",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "_hplClaimeds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_hpwClaimeds",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "_user",
         "type": "address"

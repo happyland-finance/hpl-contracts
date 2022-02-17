@@ -659,4 +659,14 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         }
         return chainId;
     }
+
+    function getScholarRewardsClaimed(address[] memory _scholars) external view returns (uint256[] memory _hplClaimeds, uint256[] memory _hpwClaimeds) {
+        _hplClaimeds = new uint256[](_scholars.length);
+        _hpwClaimeds = new uint256[](_scholars.length);
+
+        for(uint256 i = 0; i < _scholars.length; i++) {
+            _hplClaimeds[i] = scholarRewards[_scholars[i]].totalHPLReceived;
+            _hpwClaimeds[i] = scholarRewards[_scholars[i]].totalHPWReceived;
+        }
+    }
 }
