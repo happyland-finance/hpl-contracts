@@ -400,6 +400,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getLandContract",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -413,6 +426,19 @@
       }
     ],
     "name": "getLandDepositedCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getMaxWithdrawal",
     "outputs": [
       {
         "internalType": "uint256",
@@ -678,7 +704,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "operator",
+        "name": "_operator",
         "type": "address"
       },
       {

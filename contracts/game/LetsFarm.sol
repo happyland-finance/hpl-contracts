@@ -315,23 +315,9 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
 
         uint256 toTransferHpl = _hplRewards - _user.hplRewardClaimed;
         uint256 toTransferHpw = _hpwRewards - _user.hpwRewardClaimed;
-        address _land = 0x9c271b95A2Aa7Ab600b9B2E178CbBec2A6dc1bAb;
-        {
-            uint256 _chainId = getChainId();
-            if (_chainId == 97) {
-                _land = 0x03524a0561f20Cd4cE73EAE1057cFa29B29C40D1;
-            } else if (_chainId == 56) {
-                //do nothing
-            } else {
-                revert("unsupported chain");
-            }
-        }
 
-        uint256 depositedLandCount = getLandDepositedCount(msg.sender, _land);
-        uint256 maxWithdrawal = depositedLandCount * 3000 * 10**18;
-        if (maxWithdrawal > 10000 ether) {
-            maxWithdrawal = 10000 ether;
-        }
+        uint256 maxWithdrawal = getMaxWithdrawal();
+
         if (toTransferHpw > maxWithdrawal) {
             toTransferHpw = maxWithdrawal;
             _hpwRewards = _user.hpwRewardClaimed + toTransferHpw;
@@ -445,24 +431,8 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         maxWithdrawableNow[0] = toTransferHpl;
         maxWithdrawableNow[1] = toTransferHpw;
 
-        address _land = 0x9c271b95A2Aa7Ab600b9B2E178CbBec2A6dc1bAb;
-        {
-            uint256 _chainId = getChainId();
-            if (_chainId == 97) {
-                _land = 0x03524a0561f20Cd4cE73EAE1057cFa29B29C40D1;
-            } else if (_chainId == 56) {
-                //do nothing
-            } else {
-                revert("unsupported chain");
-            }
-        }
+        uint256 maxWithdrawal = getMaxWithdrawal();
 
-        uint256 depositedLandCount = getLandDepositedCount(msg.sender, _land);
-        uint256 maxWithdrawal = depositedLandCount * 3000 * 10**18;
-        //TODO: should we have withdraw cap for guilds?
-        if (maxWithdrawal > 10000 ether) {
-            maxWithdrawal = 10000 ether;
-        }
         if (toTransferHpw > maxWithdrawal) {
             toTransferHpw = maxWithdrawal;
             _hpwRewards = _user.hpwRewardClaimed + toTransferHpw;
@@ -636,7 +606,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     }
 
     function onERC721Received(
-        address operator,
+        address _operator,
         address from,
         uint256 tokenId,
         bytes calldata data
@@ -669,5 +639,29 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             _hplClaimeds[i] = scholarRewards[_scholars[i]].totalHPLReceived;
             _hpwClaimeds[i] = scholarRewards[_scholars[i]].totalHPWReceived;
         }
+    }
+
+    function getLandContract() public view returns (address) {
+        address _land = 0x9c271b95A2Aa7Ab600b9B2E178CbBec2A6dc1bAb;
+        {
+            uint256 _chainId = getChainId();
+            if (_chainId == 97) {
+                _land = 0x03524a0561f20Cd4cE73EAE1057cFa29B29C40D1;
+            } else if (_chainId == 56) {
+                //do nothing
+            } else {
+                revert("unsupported chain");
+            }
+        }
+        return _land;
+    }
+
+    function getMaxWithdrawal() public view returns (uint256) {
+        uint256 depositedLandCount = getLandDepositedCount(msg.sender, getLandContract());
+        uint256 maxWithdrawal = depositedLandCount * 3000 * 10**18;
+        if (maxWithdrawal > 10000 ether) {
+            maxWithdrawal = 10000 ether;
+        }
+        return maxWithdrawal;
     }
 }
