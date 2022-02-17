@@ -49,6 +49,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     event NFTWithdraw(address nft, address withdrawer, bytes tokenIds);
 
     event RewardsClaimed(address claimer, uint256 hplAmount, uint256 hpwAmount);
+    event MasterRewardsClaimed(address claimer, uint256 hplAmount, uint256 hpwAmount);
 
     struct UserInfoTokenWithdraw {
         uint256 hplWithdraw;
@@ -496,7 +497,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
                 _scholarHPWAmounts
             );
         }
-        emit RewardsClaimed(msg.sender, toTransferHpl, toTransferHpw);
+        emit MasterRewardsClaimed(msg.sender, toTransferHpl, toTransferHpw);
     }
 
     function _distributeHPLToScholars(
