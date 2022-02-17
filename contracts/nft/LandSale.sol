@@ -7,13 +7,15 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "../lib/Upgradeable.sol";
 import "../interfaces/ILand.sol";
+import "../interfaces/ILandSale.sol";
 import "../lib/SignerRecover.sol";
 import "../lib/BlackholePreventionUpgradeable.sol";
 
 contract LandSale is
     Upgradeable,
     BlackholePreventionUpgradeable,
-    SignerRecover
+    SignerRecover,
+    ILandSale
 {
     using AddressUpgradeable for address payable;
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -256,9 +258,10 @@ contract LandSale is
         }
     }
 
-    function mint(address _recipient, uint256 _tokenId) external {
+    function mint(address _recipient, uint256 _tokenId) external override returns (uint256) {
         require(minters[msg.sender], "!minter");
         land.mint(_recipient, _tokenId);
+        return _tokenId;
     }
 
     function withdrawEther(address payable receiver, uint256 amount)
