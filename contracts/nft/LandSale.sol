@@ -50,6 +50,10 @@ contract LandSale is
     mapping(address => uint256) public buyerMaxBoxNumber;
     mapping(address => BuyerLastToken) public buyerLastTokenId;
 
+    mapping(address => bool) public minters;
+
+    event SetMinter(address minter, bool val);
+
     function initialize(ILand _land) external initializer {
         initOwner();
 
@@ -243,6 +247,18 @@ contract LandSale is
         buyerLastTokenId[msg.sender].commitment = _commitment;
         emit OpenBox(msg.sender, maxLandId, _commitment);
         maxLandId = maxLandId + 1;
+    }
+
+    function setMinters(address[] memory _minters, bool _val) external onlyOwner {
+        for(uint256 i = 0; i < _minters.length; i++) {
+            minters[_minters[i]] = _val;
+            emit SetMinter(_minters[i], _val);
+        }
+    }
+
+    function mint(address _recipient, uint256 _tokenId) external {
+        require(minters[msg.sender], "!minter");
+        land.mint(_recipient, _tokenId);
     }
 
     function withdrawEther(address payable receiver, uint256 amount)

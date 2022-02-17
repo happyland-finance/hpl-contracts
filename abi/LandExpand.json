@@ -65,12 +65,100 @@
   },
   {
     "inputs": [],
-    "name": "DESSERT_LAND_ID_START",
+    "name": "WILD_LAND_ID_START",
     "outputs": [
       {
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "breedCommitList",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "name": "breedInfo",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "open",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "success",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "createdTokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "land1",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "land2",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "commitment",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "successRatePercentage",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "createdAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "bHash",
+        "type": "bytes32"
       }
     ],
     "stateMutability": "view",
@@ -90,35 +178,51 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "dessertLandCurrentTokenId",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "_land1",
         "type": "uint256"
-      }
-    ],
-    "name": "dessertLandTokens",
-    "outputs": [
+      },
       {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
+        "internalType": "uint256",
+        "name": "_land2",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_successRatePercentage",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "_commitment",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_expired",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "_r",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "_s",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_v",
+        "type": "uint8"
       }
     ],
-    "stateMutability": "view",
+    "name": "createBreed",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -215,6 +319,11 @@
       },
       {
         "internalType": "address",
+        "name": "_landSale",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
         "name": "_operator",
         "type": "address"
       }
@@ -232,6 +341,32 @@
         "internalType": "contract IERC721Upgradeable",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "landSale",
+    "outputs": [
+      {
+        "internalType": "contract ILandSale",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxUsedLandCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -268,6 +403,19 @@
         "type": "bytes4"
       }
     ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "_secret",
+        "type": "bytes32"
+      }
+    ],
+    "name": "openBreed",
+    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -362,6 +510,38 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "wildLandCurrentTokenId",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "wildLandTokens",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
