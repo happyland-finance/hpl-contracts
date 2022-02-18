@@ -42,6 +42,23 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     mapping(bytes32 => Breed) public breedInfo;
     ILandSale public landSale;
     uint256 public maxUsedLandCount;
+    uint256 public earlyOpenFeePercent;
+
+    event CreateBreed(
+        address user,
+        uint256 land1,
+        uint256 land2,
+        bytes32 commitment,
+        uint256 timestamp
+    );
+    event OpenBreed(
+        address user,
+        uint256 land1,
+        uint256 land2,
+        bool result,
+        uint256 createdLand,
+        uint256 timestamp
+    );
 
     function initialize(
         IERC20Upgradeable _hpl,
@@ -70,9 +87,30 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
 
         landSale = ILandSale(_landSale);
         maxUsedLandCount = 1;
+
+        earlyOpenFeePercent = 50;
     }
 
-    function createBreed(uint256 _land1, uint256 _land2, uint256 _successRatePercentage, bytes32 _commitment, uint256 _expired, bytes32 _r, bytes32 _s, uint8 _v) external {
+    function changeFees(
+        uint256 _hplFee,
+        uint256 _hpwFee,
+        uint256 _earlyOpenFeePercent
+    ) external onlyOwner {
+        hplExpandFee = _hplFee;
+        hpwExpandFee = _hpwFee;
+        earlyOpenFeePercent = _earlyOpenFeePercent;
+    }
+
+    function createBreed(
+        uint256 _land1,
+        uint256 _land2,
+        uint256 _successRatePercentage,
+        bytes32 _commitment,
+        uint256 _expired,
+        bytes32 _r,
+        bytes32 _s,
+        uint8 _v
+    ) external {
         require(_expired > block.timestamp, "expired");
         //verifying signature
         bytes32 message = keccak256(
@@ -90,13 +128,39 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             "invalid operator"
         );
 
+        createBreedInternal(_land1, _land2, _successRatePercentage, _commitment);
+    }
+
+    function createBreedFaucet(
+        uint256 _land1,
+        uint256 _land2,
+        uint256 _successRatePercentage,
+        bytes32 _commitment,
+        uint256 _expired,
+        bytes32 _r,
+        bytes32 _s,
+        uint8 _v
+    ) external {
+        if (getChainId() == 56) {
+            revert("unsupported");
+        }
+
+        createBreedInternal(_land1, _land2, _successRatePercentage, _commitment);
+    }
+
+    function createBreedInternal(
+        uint256 _land1,
+        uint256 _land2,
+        uint256 _successRatePercentage,
+        bytes32 _commitment
+    ) internal {
         require(usedLands[_land1] < maxUsedLandCount, "used land1");
         require(usedLands[_land2] < maxUsedLandCount, "used land2");
 
         require(!wildLandTokens[_land1], "wildLandTokens1");
         require(!wildLandTokens[_land2], "wildLandTokens2");
 
-        require(breedInfo[_commitment].owner == address(0) , "commitment used");
+        require(breedInfo[_commitment].owner == address(0), "commitment used");
 
         //transfer fee tokens
         hpl.safeTransferFrom(msg.sender, address(this), hplExpandFee);
@@ -115,7 +179,7 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             open: false,
             success: false,
             createdTokenId: 0,
-            owner: msg.sender, 
+            owner: msg.sender,
             land1: _land1,
             land2: _land2,
             commitment: _commitment,
@@ -123,16 +187,43 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             createdAt: block.timestamp,
             bHash: blockhash(block.number)
         });
+        emit CreateBreed(
+            msg.sender,
+            _land1,
+            _land2,
+            _commitment,
+            block.timestamp
+        );
     }
 
-    function openBreed(bytes32 _secret) external {
+    function openBreed(bytes32 _secret, bool _payFeeOpenEarly) external {
         bytes32 _commitment = keccak256(abi.encode(_secret));
         Breed storage _breed = breedInfo[_commitment];
-        require(!_breed.open && _breed.owner != address(0), "breed open or not exist");
-        require(_breed.createdAt + breedingPeriod <= block.timestamp, "!breedingPeriod");
+        require(
+            !_breed.open && _breed.owner != address(0),
+            "breed open or not exist"
+        );
+        if (!_payFeeOpenEarly) {
+            require(
+                _breed.createdAt + breedingPeriod <= block.timestamp,
+                "!breedingPeriod"
+            );
+        } else {
+            if (_breed.createdAt + breedingPeriod > block.timestamp) {
+                //pay early fees
+                //transfer fee tokens
+                hpl.safeTransferFrom(msg.sender, address(this), hplExpandFee * earlyOpenFeePercent / 100);
+                hpw.safeTransferFrom(msg.sender, address(this), hpwExpandFee * earlyOpenFeePercent / 100);
+
+                //burn hpw
+                IBurn(address(hpw)).burn(hpwExpandFee * earlyOpenFeePercent / 100);
+            }
+        }
         _breed.open = true;
 
-        bytes32 h = keccak256(abi.encode(_secret, _breed.bHash, _breed.createdAt));
+        bytes32 h = keccak256(
+            abi.encode(_secret, _breed.bHash, _breed.createdAt)
+        );
         uint256 random = uint256(h).mod(100);
 
         if (random < _breed.successRatePercentage) {
@@ -153,8 +244,27 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         //return land
         land.transferFrom(address(this), _breed.owner, _breed.land1);
         land.transferFrom(address(this), _breed.owner, _breed.land2);
+
+        emit OpenBreed(
+            _breed.owner,
+            _breed.land1,
+            _breed.land2,
+            _breed.success,
+            _breed.createdTokenId,
+            block.timestamp
+        );
     }
-    
+
+    function isExpandable(uint256[] memory _lands) external view returns (bool[] memory ret) {
+        ret = new bool[](_lands.length);
+        for(uint256 i = 0; i < _lands.length; i++) {
+            if (usedLands[_lands[i]] < maxUsedLandCount && !wildLandTokens[_lands[i]]) {
+                ret[i] = true;
+            } else {
+                ret[i] = false;
+            }
+        }
+    }
 
     function onERC721Received(
         address operator,
