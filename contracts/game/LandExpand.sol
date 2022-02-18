@@ -79,7 +79,7 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         hplExpandFee = _hplExpandFee;
         hpwExpandFee = _hpwExpandFee;
 
-        breedingPeriod = 1 days;
+        breedingPeriod = 1 hours;
         if (getChainId() != 56) {
             breedingPeriod = 10 minutes;
         }
@@ -131,21 +131,10 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         createBreedInternal(_land1, _land2, _successRatePercentage, _commitment);
     }
 
-    function createBreedFaucet(
-        uint256 _land1,
-        uint256 _land2,
-        uint256 _successRatePercentage,
-        bytes32 _commitment,
-        uint256 _expired,
-        bytes32 _r,
-        bytes32 _s,
-        uint8 _v
-    ) external {
-        if (getChainId() == 56) {
-            revert("unsupported");
-        }
-
-        createBreedInternal(_land1, _land2, _successRatePercentage, _commitment);
+    function setMaxUsedLandCount(
+        uint256 _maxUsedLandCount
+    ) external onlyOwner {
+        maxUsedLandCount = _maxUsedLandCount;
     }
 
     function createBreedInternal(
