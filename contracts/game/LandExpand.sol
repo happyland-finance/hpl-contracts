@@ -196,9 +196,10 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         );
     }
 
-    function openBreed(bytes32 _secret, bool _payFeeOpenEarly) external {
+    function openBreed(bytes32 _secret, uint256 _commitmentIndex, bool _payFeeOpenEarly) external {
         bytes32 _commitment = keccak256(abi.encode(_secret));
         Breed storage _breed = breedInfo[_commitment];
+        require(_commitment == breedCommitList[_breed.owner][_commitmentIndex], "invalid commitment index");
         require(
             !_breed.open && _breed.owner != address(0),
             "breed open or not exist"
@@ -246,13 +247,10 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         land.transferFrom(address(this), _breed.owner, _breed.land2);
 
         //looking to delete commitment
-        for(uint256 i = 0; i < breedCommitList[_breed.owner].length; i++) {
-            if (breedCommitList[_breed.owner][i] == _commitment) {
-                breedCommitList[_breed.owner][i] = breedCommitList[_breed.owner][breedCommitList[_breed.owner].length - 1];
-                breedCommitList[_breed.owner].pop();
-                break;
-            }
-        }
+
+        breedCommitList[_breed.owner][_commitmentIndex] = breedCommitList[_breed.owner][breedCommitList[_breed.owner].length - 1];
+        breedCommitList[_breed.owner].pop();
+
 
         emit OpenBreed(
             _breed.owner,
@@ -291,5 +289,13 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             chainId := chainid()
         }
         return chainId;
+    }
+
+    function getBreedList(address _user) external view returns (Breed[] memory ret) {
+        bytes32[] memory commitments = breedCommitList[_user];
+        ret = new Breed[](commitments.length);
+        for(uint256 i = 0; i < commitments.length; i++) {
+            ret[i] = breedInfo[commitments[i]];
+        }
     }
 }
