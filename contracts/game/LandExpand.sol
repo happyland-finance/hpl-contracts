@@ -191,7 +191,7 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         Breed storage _breed = breedInfo[_commitment];
         require(_commitment == breedCommitList[_breed.owner][_commitmentIndex], "invalid commitment index");
         require(
-            !_breed.open && _breed.owner != address(0),
+            !_breed.open && _breed.owner != address(0) && _breed.commitment == _commitment,
             "breed open or not exist"
         );
         if (!_payFeeOpenEarly) {
@@ -252,9 +252,13 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         );
     }
 
-    function isExpandable(uint256[] memory _lands) external view returns (bool[] memory ret) {
+    function isExpandable(address _owner, uint256[] memory _lands) external view returns (bool[] memory ret) {
         ret = new bool[](_lands.length);
         for(uint256 i = 0; i < _lands.length; i++) {
+            if (land.ownerOf(_lands[i]) != _owner) {
+                ret[i] = false;
+                continue;
+            }
             if (usedLands[_lands[i]] < maxUsedLandCount && !wildLandTokens[_lands[i]]) {
                 ret[i] = true;
             } else {
@@ -283,6 +287,14 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
 
     function getBreedList(address _user) external view returns (Breed[] memory ret) {
         bytes32[] memory commitments = breedCommitList[_user];
+        ret = new Breed[](commitments.length);
+        for(uint256 i = 0; i < commitments.length; i++) {
+            ret[i] = breedInfo[commitments[i]];
+        }
+    }
+
+    function getCompleteBreedList(address _user) external view returns (Breed[] memory ret) {
+        bytes32[] memory commitments = completeBreedCommitList[_user];
         ret = new Breed[](commitments.length);
         for(uint256 i = 0; i < commitments.length; i++) {
             ret[i] = breedInfo[commitments[i]];
