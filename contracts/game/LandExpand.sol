@@ -245,6 +245,15 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         land.transferFrom(address(this), _breed.owner, _breed.land1);
         land.transferFrom(address(this), _breed.owner, _breed.land2);
 
+        //looking to delete commitment
+        for(uint256 i = 0; i < breedCommitList[_breed.owner].length; i++) {
+            if (breedCommitList[_breed.owner][i] == _commitment) {
+                breedCommitList[_breed.owner][i] = breedCommitList[_breed.owner][breedCommitList[_breed.owner].length - 1];
+                breedCommitList[_breed.owner].pop();
+                break;
+            }
+        }
+
         emit OpenBreed(
             _breed.owner,
             _breed.land1,
