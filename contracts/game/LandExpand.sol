@@ -43,6 +43,7 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     ILandSale public landSale;
     uint256 public maxUsedLandCount;
     uint256 public earlyOpenFeePercent;
+    mapping(address => bytes32[]) public completeBreedCommitList;
 
     event CreateBreed(
         address user,
@@ -239,7 +240,7 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
 
         breedCommitList[_breed.owner][_commitmentIndex] = breedCommitList[_breed.owner][breedCommitList[_breed.owner].length - 1];
         breedCommitList[_breed.owner].pop();
-
+        completeBreedCommitList[_breed.owner].push(_commitment);
 
         emit OpenBreed(
             _breed.owner,
