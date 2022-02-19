@@ -37,6 +37,9 @@ contract Market is Upgradeable {
     SaleInfo[] public saleList;
 
     mapping(address => uint256) public totalVolume;
+    //address => saleId
+    mapping(address => uint256) public highestTrade;
+    uint256 public latestTradeSaleId;
 
     event NFTSupported(address nft, bool val);
 
@@ -281,6 +284,14 @@ contract Market is Upgradeable {
 
         uint256 price = sale.price;
         totalVolume[sale.paymentToken] += price;
+        //update trade info
+        {
+            latestTradeSaleId = sale.saleId + 1;
+            SaleInfo memory _highestTrade = getHighestTradeInfo(sale.paymentToken);
+            if (price >= _highestTrade.price) {
+                highestTrade[sale.paymentToken] = sale.saleId + 1;
+            }
+        }
         //transfer fee
         if (isNative(sale.paymentToken)) {
             require(msg.value >= price.mul(1000 + feePercentX10).div(1000), "insufficiant payment value");
@@ -333,5 +344,19 @@ contract Market is Upgradeable {
         returns (SaleInfo memory sale)
     {
         return saleList[_saleId];
+    }
+
+    function getHighestTradeInfo(address _paymentToken) public view returns (SaleInfo memory ret) {
+        if (highestTrade[_paymentToken] == 0) {
+            return ret;
+        }
+        return saleList[highestTrade[_paymentToken] - 1];
+    }
+
+    function getLatestTradeInfo() public view returns (SaleInfo memory ret) {
+        if (latestTradeSaleId == 0) {
+            return ret;
+        }
+        return saleList[latestTradeSaleId - 1];
     }
 }
