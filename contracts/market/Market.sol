@@ -36,6 +36,8 @@ contract Market is Upgradeable {
 
     SaleInfo[] public saleList;
 
+    mapping(address => uint256) public totalVolume;
+
     event NFTSupported(address nft, bool val);
 
     event NewTokenSale(
@@ -278,22 +280,23 @@ contract Market is Upgradeable {
         sale.isActive = false;
 
         uint256 price = sale.price;
+        totalVolume[sale.paymentToken] += price;
         //transfer fee
         if (isNative(sale.paymentToken)) {
-            require(msg.value >= price, "insufficiant payment value");
+            require(msg.value >= price.mul(1000 + feePercentX10).div(1000), "insufficiant payment value");
             sale.owner.sendValue(price.mul(1000 - feePercentX10).div(1000));
             feeReceiver.sendValue(address(this).balance);
         } else {
-            IERC20Upgradeable(sale.paymentToken).safeTransferFrom(
-                msg.sender,
-                feeReceiver,
-                price.mul(feePercentX10).div(1000)
-            );
             //transfer to seller
             IERC20Upgradeable(sale.paymentToken).safeTransferFrom(
                 msg.sender,
                 sale.owner,
                 price.mul(1000 - feePercentX10).div(1000)
+            );
+            IERC20Upgradeable(sale.paymentToken).safeTransferFrom(
+                msg.sender,
+                feeReceiver,
+                price.mul(feePercentX10 * 2).div(1000)
             );
         }
 

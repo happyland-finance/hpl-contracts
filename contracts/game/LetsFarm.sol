@@ -316,7 +316,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         uint256 toTransferHpl = _hplRewards - _user.hplRewardClaimed;
         uint256 toTransferHpw = _hpwRewards - _user.hpwRewardClaimed;
 
-        uint256 maxWithdrawal = getMaxWithdrawal();
+        uint256 maxWithdrawal = getMaxWithdrawal(msg.sender, false);
 
         if (toTransferHpw > maxWithdrawal) {
             toTransferHpw = maxWithdrawal;
@@ -431,7 +431,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         maxWithdrawableNow[0] = toTransferHpl;
         maxWithdrawableNow[1] = toTransferHpw;
 
-        uint256 maxWithdrawal = getMaxWithdrawal();
+        uint256 maxWithdrawal = getMaxWithdrawal(_masterAddress, false);
 
         if (toTransferHpw > maxWithdrawal) {
             toTransferHpw = maxWithdrawal;
@@ -656,12 +656,28 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         return _land;
     }
 
-    function getMaxWithdrawal() public view returns (uint256) {
-        uint256 depositedLandCount = getLandDepositedCount(msg.sender, getLandContract());
+    function getMaxWithdrawal(address _user, bool _tightCheck) public view returns (uint256) {
+        uint256 depositedLandCount = getLandDepositedCount(_user, getLandContract());
+        if (_tightCheck) {
+            depositedLandCount = getLandCountForRewardsClaim(_user);
+        }
         uint256 maxWithdrawal = depositedLandCount * 3000 * 10**18;
         if (maxWithdrawal > 10000 ether) {
             maxWithdrawal = 10000 ether;
         }
         return maxWithdrawal;
+    }
+
+    function getLandCountForRewardsClaim(address _user) public view returns (uint256) {
+        address _land = getLandContract();
+        uint256[] storage _depositedTokenIds = nftUserInfo[_land][_user].depositedTokenIds;
+        uint256 ret = 0;
+        for(uint256 i = 0; i < _depositedTokenIds.length; i++) {
+            if (nftDepositedTime[_land][_depositedTokenIds[i]] + minTimeBetweenClaims < block.timestamp) {
+                ret++;
+            }
+        }
+
+        return ret;
     }
 }
