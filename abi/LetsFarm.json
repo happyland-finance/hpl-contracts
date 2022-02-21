@@ -466,6 +466,11 @@
         "internalType": "bool",
         "name": "_tightCheck",
         "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "_forGuild",
+        "type": "bool"
       }
     ],
     "name": "getMaxWithdrawal",

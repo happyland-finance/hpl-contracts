@@ -300,4 +300,12 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             ret[i] = breedInfo[commitments[i]];
         }
     }
+
+    function getLatestBreedOpen(address _user) external view returns (Breed memory ret) {
+        bytes32[] memory commitments = completeBreedCommitList[_user];
+        uint256 last = commitments.length;
+        if (last > 0) {
+            return breedInfo[commitments[last - 1]];
+        }
+    }
 }

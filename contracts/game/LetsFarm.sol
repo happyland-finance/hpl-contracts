@@ -316,7 +316,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         uint256 toTransferHpl = _hplRewards - _user.hplRewardClaimed;
         uint256 toTransferHpw = _hpwRewards - _user.hpwRewardClaimed;
 
-        uint256 maxWithdrawal = getMaxWithdrawal(msg.sender, false);
+        uint256 maxWithdrawal = getMaxWithdrawal(msg.sender, false, false);
 
         if (toTransferHpw > maxWithdrawal) {
             toTransferHpw = maxWithdrawal;
@@ -431,7 +431,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         maxWithdrawableNow[0] = toTransferHpl;
         maxWithdrawableNow[1] = toTransferHpw;
 
-        uint256 maxWithdrawal = getMaxWithdrawal(_masterAddress, false);
+        uint256 maxWithdrawal = getMaxWithdrawal(_masterAddress, false, true);
 
         if (toTransferHpw > maxWithdrawal) {
             toTransferHpw = maxWithdrawal;
@@ -656,15 +656,18 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         return _land;
     }
 
-    function getMaxWithdrawal(address _user, bool _tightCheck) public view returns (uint256) {
+    function getMaxWithdrawal(address _user, bool _tightCheck, bool _forGuild) public view returns (uint256) {
         uint256 depositedLandCount = getLandDepositedCount(_user, getLandContract());
         if (_tightCheck) {
             depositedLandCount = getLandCountForRewardsClaim(_user);
         }
         uint256 maxWithdrawal = depositedLandCount * 3000 * 10**18;
-        if (maxWithdrawal > 10000 ether) {
-            maxWithdrawal = 10000 ether;
+        if (!_forGuild) {
+            if (maxWithdrawal > 10000 ether) {
+                maxWithdrawal = 10000 ether;
+            }
         }
+        
         return maxWithdrawal;
     }
 
