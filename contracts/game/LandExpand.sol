@@ -7,10 +7,11 @@ import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "../lib/SignerRecover.sol";
 import "../interfaces/IBurn.sol";
 import "../lib/Upgradeable.sol";
+import "../interfaces/ILandExpand.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 import "../interfaces/ILandSale.sol";
 
-contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
+contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable, ILandExpand {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
@@ -33,8 +34,8 @@ contract LandExpand is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     address public operator;
     uint256 public constant WILD_LAND_ID_START = 10000000;
     uint256 public wildLandCurrentTokenId;
-    mapping(uint256 => bool) public wildLandTokens;
-    mapping(uint256 => uint256) public usedLands;
+    mapping(uint256 => bool) public override wildLandTokens;
+    mapping(uint256 => uint256) public override usedLands;
     uint256 public hplExpandFee;
     uint256 public hpwExpandFee;
     uint256 public breedingPeriod;

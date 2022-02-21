@@ -12,6 +12,7 @@ import "../interfaces/IBurn.sol";
 import "../lib/Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 import "../interfaces/IMint.sol";
+import "../interfaces/ILandExpand.sol";
 
 contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -49,7 +50,11 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     event NFTWithdraw(address nft, address withdrawer, bytes tokenIds);
 
     event RewardsClaimed(address claimer, uint256 hplAmount, uint256 hpwAmount);
-    event MasterRewardsClaimed(address claimer, uint256 hplAmount, uint256 hpwAmount);
+    event MasterRewardsClaimed(
+        address claimer,
+        uint256 hplAmount,
+        uint256 hpwAmount
+    );
 
     struct UserInfoTokenWithdraw {
         uint256 hplWithdraw;
@@ -75,6 +80,13 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     }
     mapping(address => ScholarRewards) public scholarRewards;
 
+    mapping(address => uint256) public wildLandsCount;
+    uint256 public totalWildLands;
+    ILandExpand public landExpand;
+
+    uint256 public maxWithdrawPerLand;
+    uint256 public maxWithdrawPerWildLand;
+
     function initialize(
         IERC20Upgradeable _hpl,
         IERC20Upgradeable _hpw,
@@ -88,6 +100,21 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         hpl = _hpl;
         hpw = _hpw;
         operator = _operator;
+
+        maxWithdrawPerLand = 3000 ether;
+        maxWithdrawPerWildLand = 800 ether;
+    }
+
+    function setMaxWithdrawlPerLand(uint256 _normalLand, uint256 _wildLand)
+        external
+        onlyOwner
+    {
+        maxWithdrawPerLand = _normalLand;
+        maxWithdrawPerWildLand = _wildLand;
+    }
+
+    function setLandExpand(address _landExpand) external onlyOwner {
+        landExpand = ILandExpand(_landExpand);
     }
 
     function setMinTimeBetweenClaims(uint256 _minTimeBetweenClaims)
@@ -137,6 +164,11 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             _user.depositedTokenIds.push(_tokenIds[i]);
             _user.tokenIdToIndex[_tokenIds[i]] = _user.depositedTokenIds.length;
             nftDepositedTime[_nft][_tokenIds[i]] = block.timestamp;
+
+            if (isWildLand(_tokenIds[i])) {
+                wildLandsCount[msg.sender]++;
+                totalWildLands++;
+            }
         }
 
         if (userInfo[msg.sender].lastUpdatedAt == 0) {
@@ -178,6 +210,10 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
                 msg.sender,
                 _tokenIds[i]
             );
+            if (isWildLand(_tokenIds[i])) {
+                wildLandsCount[msg.sender]--;
+                totalWildLands--;
+            }
             //swap
             uint256 _index = _user.tokenIdToIndex[_tokenIds[i]] - 1;
             _user.depositedTokenIds[_index] = _user.depositedTokenIds[
@@ -618,9 +654,12 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     function getLandDepositedCount(address _addr, address _nft)
         public
         view
-        returns (uint256)
+        returns (uint256 total, uint256 wildLandCount)
     {
-        return nftUserInfo[_nft][_addr].depositedTokenIds.length;
+        return (
+            nftUserInfo[_nft][_addr].depositedTokenIds.length,
+            wildLandsCount[_addr]
+        );
     }
 
     function getChainId() public view returns (uint256) {
@@ -631,11 +670,15 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         return chainId;
     }
 
-    function getScholarRewardsClaimed(address[] memory _scholars) external view returns (uint256[] memory _hplClaimeds, uint256[] memory _hpwClaimeds) {
+    function getScholarRewardsClaimed(address[] memory _scholars)
+        external
+        view
+        returns (uint256[] memory _hplClaimeds, uint256[] memory _hpwClaimeds)
+    {
         _hplClaimeds = new uint256[](_scholars.length);
         _hpwClaimeds = new uint256[](_scholars.length);
 
-        for(uint256 i = 0; i < _scholars.length; i++) {
+        for (uint256 i = 0; i < _scholars.length; i++) {
             _hplClaimeds[i] = scholarRewards[_scholars[i]].totalHPLReceived;
             _hpwClaimeds[i] = scholarRewards[_scholars[i]].totalHPWReceived;
         }
@@ -656,31 +699,66 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         return _land;
     }
 
-    function getMaxWithdrawal(address _user, bool _tightCheck, bool _forGuild) public view returns (uint256) {
-        uint256 depositedLandCount = getLandDepositedCount(_user, getLandContract());
-        if (_tightCheck) {
-            depositedLandCount = getLandCountForRewardsClaim(_user);
-        }
-        uint256 maxWithdrawal = depositedLandCount * 3000 * 10**18;
+    function getMaxWithdrawal(
+        address _user,
+        bool _tightCheck,
+        bool _forGuild
+    ) public view returns (uint256) {
+        (
+            uint256 depositedLandCount,
+            uint256 wildLandCount
+        ) = getLandDepositedCount(_user, getLandContract());
+        // if (_tightCheck) {
+        //     depositedLandCount = getLandCountForRewardsClaim(_user);
+        // }
+        uint256 normalLand = depositedLandCount.sub(wildLandCount);
+        uint256 _maxPerLand = maxWithdrawPerLand != 0
+            ? maxWithdrawPerLand
+            : (3000 ether);
+        uint256 _maxPerWildLand = maxWithdrawPerWildLand != 0
+            ? maxWithdrawPerWildLand
+            : (800 ether);
+        uint256 maxWithdrawal = (normalLand *
+            _maxPerLand +
+            wildLandCount *
+            _maxPerWildLand);
         if (!_forGuild) {
             if (maxWithdrawal > 10000 ether) {
                 maxWithdrawal = 10000 ether;
             }
         }
-        
+
         return maxWithdrawal;
     }
 
-    function getLandCountForRewardsClaim(address _user) public view returns (uint256) {
+    function getLandCountForRewardsClaim(address _user)
+        public
+        view
+        returns (uint256)
+    {
         address _land = getLandContract();
-        uint256[] storage _depositedTokenIds = nftUserInfo[_land][_user].depositedTokenIds;
+        uint256[] storage _depositedTokenIds = nftUserInfo[_land][_user]
+            .depositedTokenIds;
         uint256 ret = 0;
-        for(uint256 i = 0; i < _depositedTokenIds.length; i++) {
-            if (nftDepositedTime[_land][_depositedTokenIds[i]] + minTimeBetweenClaims < block.timestamp) {
+        for (uint256 i = 0; i < _depositedTokenIds.length; i++) {
+            if (
+                nftDepositedTime[_land][_depositedTokenIds[i]] +
+                    minTimeBetweenClaims <
+                block.timestamp
+            ) {
                 ret++;
             }
         }
 
         return ret;
+    }
+
+    function isWildLand(uint256 _tokenId) public view returns (bool) {
+        if (address(landExpand) != address(0)) {
+            if (landExpand.wildLandTokens(_tokenId)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
