@@ -728,6 +728,12 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             }
         }
 
+        //check hpw holding
+        uint256 balance = hpw.balanceOf(_user);
+        if (maxWithdrawal > balance) {
+            maxWithdrawal = balance;
+        }
+
         return maxWithdrawal;
     }
 
