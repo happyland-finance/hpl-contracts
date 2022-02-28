@@ -77,6 +77,8 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         address masterWallet;
         uint256 totalHPLReceived;
         uint256 totalHPWReceived;
+        uint256 totalHPLClaimedForThisScholar;
+        uint256 totalHPWClaimedForThisScholar;
     }
     mapping(address => ScholarRewards) public scholarRewards;
 
@@ -394,26 +396,34 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     }
 
     function masterDistributeRewards(
-        uint256 _hplRewards, //total
-        uint256 _hpwRewards, //total
+        uint256[2] memory _rewards, // total [hpl, hpw]
         uint256 _expiredTime,
-        address _masterAddress,
         address[] memory _scholarAddresses,
-        uint256[] memory _scholarHPLAmounts, //total
-        uint256[] memory _scholarHPWAmounts, //total
-        bytes32 r,
-        bytes32 s,
+        uint256[] memory _commissions,
+        uint256[] memory _scholarHPLSpents, //total spent by this scholar
+        uint256[] memory _scholarHPWSpents, //total spent by this scholar
+        uint256[] memory _scholarHPLAmounts, //total rewards
+        uint256[] memory _scholarHPWAmounts, //total rewards
+        bytes32[2] memory rs,
         uint8 v
     ) external {
         require(
             block.timestamp < _expiredTime,
             "masterDistributeRewards: !expired"
         );
+        require(
+            _scholarAddresses.length == _commissions.length &&
+                _commissions.length == _scholarHPLSpents.length &&
+                _scholarHPLSpents.length == _scholarHPWSpents.length &&
+                _scholarHPWSpents.length == _scholarHPLAmounts.length &&
+                _scholarHPLAmounts.length == _scholarHPWAmounts.length,
+            "!invalid input array length"
+        );
         bytes32 msgHash = keccak256(
             abi.encode(
-                _masterAddress,
-                _hplRewards,
-                _hpwRewards,
+                msg.sender,
+                _rewards[0],
+                _rewards[1],
                 _scholarAddresses,
                 _scholarHPLAmounts,
                 _scholarHPWAmounts,
@@ -421,25 +431,27 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             )
         );
         require(
-            operator == recoverSigner(r, s, v, msgHash),
+            operator == recoverSigner(rs[0], rs[1], v, msgHash),
             "invalid operator"
         );
 
         _masterDistributeRewardsInternal(
-            _hplRewards,
-            _hpwRewards,
-            _masterAddress,
+            _rewards,
             _scholarAddresses,
+            _commissions,
+            _scholarHPLSpents,
+            _scholarHPWSpents,
             _scholarHPLAmounts,
             _scholarHPWAmounts
         );
     }
 
     function _masterDistributeRewardsInternal(
-        uint256 _hplRewards, //total
-        uint256 _hpwRewards, //total
-        address _masterAddress,
+        uint256[2] memory _rewards, //total
         address[] memory _scholarAddresses,
+        uint256[] memory _commissions,
+        uint256[] memory _scholarHPLSpents, //total spent by this scholar
+        uint256[] memory _scholarHPWSpents, //total spent by this scholar
         uint256[] memory _scholarHPLAmounts,
         uint256[] memory _scholarHPWAmounts
     ) internal {
@@ -449,7 +461,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             "!invalid input array lengths"
         );
         //compute total rewards to distribute
-        UserInfo storage _user = userInfo[_masterAddress];
+        UserInfo storage _user = userInfo[msg.sender];
         //uint256 lastUpdatedAt = _user.lastUpdatedAt;
         uint256 _lastRewardClaimedAt = _user.lastRewardClaimedAt;
         _lastRewardClaimedAt = _lastRewardClaimedAt > 0
@@ -459,27 +471,27 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             _lastRewardClaimedAt + minTimeBetweenClaims < block.timestamp,
             "!minTimeBetweenClaims"
         );
-        require(_user.hplRewardClaimed <= _hplRewards, "invalid _hplRewards");
-        require(_user.hpwRewardClaimed <= _hpwRewards, "invalid _hpwRewards");
+        require(_user.hplRewardClaimed <= _rewards[0], "invalid _hplRewards");
+        require(_user.hpwRewardClaimed <= _rewards[1], "invalid _hpwRewards");
         uint256[2] memory maxWithdrawableNow;
-        uint256 toTransferHpl = _hplRewards - _user.hplRewardClaimed;
-        uint256 toTransferHpw = _hpwRewards - _user.hpwRewardClaimed;
+        uint256 toTransferHpl = _rewards[0] - _user.hplRewardClaimed;
+        uint256 toTransferHpw = _rewards[1] - _user.hpwRewardClaimed;
         maxWithdrawableNow[0] = toTransferHpl;
         maxWithdrawableNow[1] = toTransferHpw;
 
-        uint256 maxWithdrawal = getMaxWithdrawal(_masterAddress, false, true);
+        uint256 maxWithdrawal = getMaxWithdrawal(msg.sender, false, true);
 
         if (toTransferHpw > maxWithdrawal) {
             toTransferHpw = maxWithdrawal;
-            _hpwRewards = _user.hpwRewardClaimed + toTransferHpw;
+            _rewards[0] = _user.hpwRewardClaimed + toTransferHpw;
         }
 
         if (toTransferHpl > maxWithdrawal) {
             toTransferHpl = maxWithdrawal;
-            _hplRewards = _user.hplRewardClaimed + toTransferHpl;
+            _rewards[1] = _user.hplRewardClaimed + toTransferHpl;
         }
-        _user.hplRewardClaimed = _hplRewards;
-        _user.hpwRewardClaimed = _hpwRewards;
+        _user.hplRewardClaimed = _rewards[0];
+        _user.hpwRewardClaimed = _rewards[1];
         _user.lastRewardClaimedAt = block.timestamp;
 
         //distribute hpl
@@ -487,8 +499,10 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             _distributeHPLToScholars(
                 toTransferHpl,
                 maxWithdrawableNow[0],
-                _masterAddress,
+                msg.sender,
                 _scholarAddresses,
+                _commissions,
+                _scholarHPLSpents,
                 _scholarHPLAmounts
             );
         }
@@ -498,8 +512,10 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             _distributeHPWToScholars(
                 toTransferHpw,
                 maxWithdrawableNow[1],
-                _masterAddress,
+                msg.sender,
                 _scholarAddresses,
+                _commissions,
+                _scholarHPWSpents,
                 _scholarHPWAmounts
             );
         }
@@ -511,6 +527,8 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         uint256 _maxWithdraw,
         address _masterAddress,
         address[] memory _scholarAddresses,
+        uint256[] memory _commissions,
+        uint256[] memory _scholarHPLSpents, //total spent by this scholar
         uint256[] memory _scholarHPLAmounts
     ) internal {
         uint256 _totalTransferredHPL = 0;
@@ -524,16 +542,33 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             );
             scholarRewards[_scholarAddresses[i]].masterWallet = _masterAddress;
 
-            uint256 _scholarClaimable = _scholarHPLAmounts[i].sub(
-                scholarRewards[_scholarAddresses[i]].totalHPLReceived
-            );
-            _scholarClaimable =
-                (_scholarClaimable * _toTransferHpl) /
-                _maxWithdraw;
-            scholarRewards[_scholarAddresses[i]]
-                .totalHPLReceived += _scholarClaimable;
-            _totalTransferredHPL += _scholarClaimable;
-            hpl.safeTransfer(_scholarAddresses[i], _scholarClaimable);
+            if (_scholarHPLAmounts[i] > _scholarHPLSpents[i]) {
+                //compute schlar claimable based on commissions
+                uint256 _scholarClaimableBasedOnCommissions = ((_scholarHPLAmounts[
+                        i
+                    ] - _scholarHPLSpents[i]) * _commissions[i]) / 100;
+                if (
+                    scholarRewards[_scholarAddresses[i]].totalHPLReceived <
+                    _scholarClaimableBasedOnCommissions
+                ) {
+                    uint256 _scholarClaimable = _scholarClaimableBasedOnCommissions -
+                            scholarRewards[_scholarAddresses[i]]
+                                .totalHPLReceived;
+
+                    _scholarClaimable =
+                        (_scholarClaimable * _toTransferHpl) /
+                        _maxWithdraw;
+                    scholarRewards[_scholarAddresses[i]]
+                        .totalHPLReceived += _scholarClaimable;
+                    scholarRewards[_scholarAddresses[i]]
+                        .totalHPLClaimedForThisScholar += _scholarClaimable * 100 / _commissions[i];
+                    _totalTransferredHPL += _scholarClaimable;
+                    hpl.safeTransfer(_scholarAddresses[i], _scholarClaimable);
+                }
+            } else {
+                scholarRewards[_scholarAddresses[i]]
+                        .totalHPLClaimedForThisScholar = _scholarHPLAmounts[i];
+            }
         }
         require(
             _totalTransferredHPL <= _toTransferHpl,
@@ -547,6 +582,8 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         uint256 _maxWithdraw,
         address _masterAddress,
         address[] memory _scholarAddresses,
+        uint256[] memory _commissions,
+        uint256[] memory _scholarHPWSpents, //total spent by this scholar
         uint256[] memory _scholarHPWAmounts
     ) internal {
         uint256 _totalTransferredHPW = 0;
@@ -560,16 +597,36 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             );
             scholarRewards[_scholarAddresses[i]].masterWallet = _masterAddress;
 
-            uint256 _scholarClaimable = _scholarHPWAmounts[i].sub(
-                scholarRewards[_scholarAddresses[i]].totalHPWReceived
-            );
-            _scholarClaimable =
-                (_scholarClaimable * _toTransferHpw) /
-                _maxWithdraw;
-            scholarRewards[_scholarAddresses[i]]
-                .totalHPWReceived += _scholarClaimable;
-            _totalTransferredHPW += _scholarClaimable;
-            IMint(address(hpw)).mint(_scholarAddresses[i], _scholarClaimable);
+            if (_scholarHPWAmounts[i] > _scholarHPWSpents[i]) {
+                //compute schlar claimable based on commissions
+                uint256 _scholarClaimableBasedOnCommissions = ((_scholarHPWAmounts[
+                        i
+                    ] - _scholarHPWSpents[i]) * _commissions[i]) / 100;
+                if (
+                    scholarRewards[_scholarAddresses[i]].totalHPWReceived <
+                    _scholarClaimableBasedOnCommissions
+                ) {
+                    uint256 _scholarClaimable = _scholarClaimableBasedOnCommissions -
+                            scholarRewards[_scholarAddresses[i]]
+                                .totalHPWReceived;
+
+                    _scholarClaimable =
+                        (_scholarClaimable * _toTransferHpw) /
+                        _maxWithdraw;
+                    scholarRewards[_scholarAddresses[i]]
+                        .totalHPWReceived += _scholarClaimable;
+                    scholarRewards[_scholarAddresses[i]]
+                        .totalHPWClaimedForThisScholar += _scholarClaimable * 100 / _commissions[i];
+                    _totalTransferredHPW += _scholarClaimable;
+                    IMint(address(hpw)).mint(
+                        _scholarAddresses[i],
+                        _scholarClaimable
+                    );
+                }
+            } else {
+                scholarRewards[_scholarAddresses[i]]
+                        .totalHPWClaimedForThisScholar = _scholarHPWAmounts[i];
+            }
         }
         require(
             _totalTransferredHPW <= _toTransferHpw,
@@ -729,10 +786,10 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         }
 
         //check hpw holding
-        uint256 balance = hpw.balanceOf(_user);
-        if (maxWithdrawal > balance) {
-            maxWithdrawal = balance;
-        }
+        // uint256 balance = hpw.balanceOf(_user);
+        // if (maxWithdrawal > balance) {
+        //     maxWithdrawal = balance;
+        // }
 
         return maxWithdrawal;
     }
