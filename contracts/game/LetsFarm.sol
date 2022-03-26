@@ -12,6 +12,7 @@ import "../interfaces/IBurn.sol";
 import "../lib/Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 import "../interfaces/IMint.sol";
+import "../interfaces/ILandExpand.sol";
 
 contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -49,6 +50,11 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     event NFTWithdraw(address nft, address withdrawer, bytes tokenIds);
 
     event RewardsClaimed(address claimer, uint256 hplAmount, uint256 hpwAmount);
+    event MasterRewardsClaimed(
+        address claimer,
+        uint256 hplAmount,
+        uint256 hpwAmount
+    );
 
     struct UserInfoTokenWithdraw {
         uint256 hplWithdraw;
@@ -58,6 +64,30 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
 
     uint256 public minTimeBetweenClaims;
     uint256 public contractStartAt;
+
+    struct UserInfoTokenSpend {
+        uint256 totalRecordedHPLSpent;
+        uint256 totalRecordedHPWSpent;
+    }
+
+    mapping(address => UserInfoTokenSpend) public userInfoTokenSpend;
+    mapping(address => mapping(uint256 => uint256)) public nftDepositedTime;
+
+    struct ScholarRewards {
+        address masterWallet;
+        uint256 totalHPLReceived;
+        uint256 totalHPWReceived;
+        uint256 totalHPLClaimedForThisScholar;
+        uint256 totalHPWClaimedForThisScholar;
+    }
+    mapping(address => ScholarRewards) public scholarRewards;
+
+    mapping(address => uint256) public wildLandsCount;
+    uint256 public totalWildLands;
+    ILandExpand public landExpand;
+
+    uint256 public maxWithdrawPerLand;
+    uint256 public maxWithdrawPerWildLand;
 
     function initialize(
         IERC20Upgradeable _hpl,
@@ -72,6 +102,21 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         hpl = _hpl;
         hpw = _hpw;
         operator = _operator;
+
+        maxWithdrawPerLand = 3000 ether;
+        maxWithdrawPerWildLand = 800 ether;
+    }
+
+    function setMaxWithdrawlPerLand(uint256 _normalLand, uint256 _wildLand)
+        external
+        onlyOwner
+    {
+        maxWithdrawPerLand = _normalLand;
+        maxWithdrawPerWildLand = _wildLand;
+    }
+
+    function setLandExpand(address _landExpand) external onlyOwner {
+        landExpand = ILandExpand(_landExpand);
     }
 
     function setMinTimeBetweenClaims(uint256 _minTimeBetweenClaims)
@@ -94,10 +139,14 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     }
 
     function depositTokensToPlay(uint256 _hplAmount, uint256 _hpwAmount)
-        external
+        public
     {
         hpl.safeTransferFrom(msg.sender, address(this), _hplAmount);
         hpw.safeTransferFrom(msg.sender, address(this), _hpwAmount);
+        if (userInfo[msg.sender].lastUpdatedAt == 0) {
+            //first time deposit, set lastRewardClaimedAt to current time
+            userInfo[msg.sender].lastRewardClaimedAt = block.timestamp;
+        }
         userInfo[msg.sender].hplDeposit += _hplAmount;
         userInfo[msg.sender].hpwDeposit += _hpwAmount;
         userInfo[msg.sender].lastUpdatedAt = block.timestamp;
@@ -116,6 +165,17 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             );
             _user.depositedTokenIds.push(_tokenIds[i]);
             _user.tokenIdToIndex[_tokenIds[i]] = _user.depositedTokenIds.length;
+            nftDepositedTime[_nft][_tokenIds[i]] = block.timestamp;
+
+            if (isWildLand(_tokenIds[i])) {
+                wildLandsCount[msg.sender]++;
+                totalWildLands++;
+            }
+        }
+
+        if (userInfo[msg.sender].lastUpdatedAt == 0) {
+            //first time deposit, set lastRewardClaimedAt to current time
+            userInfo[msg.sender].lastRewardClaimedAt = block.timestamp;
         }
 
         userInfo[msg.sender].lastUpdatedAt = block.timestamp;
@@ -141,12 +201,21 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         );
         DepositedNFT storage _user = nftUserInfo[_nft][msg.sender];
         for (uint256 i = 0; i < _tokenIds.length; i++) {
+            require(
+                nftDepositedTime[_nft][_tokenIds[i]] + 2 * 86400 <=
+                    block.timestamp,
+                "not nft unlock time"
+            );
             require(_user.tokenIdToIndex[_tokenIds[i]] > 0, "invalid tokenId");
             IERC721Upgradeable(_nft).transferFrom(
                 address(this),
                 msg.sender,
                 _tokenIds[i]
             );
+            if (isWildLand(_tokenIds[i])) {
+                wildLandsCount[msg.sender]--;
+                totalWildLands--;
+            }
             //swap
             uint256 _index = _user.tokenIdToIndex[_tokenIds[i]] - 1;
             _user.depositedTokenIds[_index] = _user.depositedTokenIds[
@@ -212,8 +281,27 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         hpw.safeTransfer(msg.sender, _hpwWithdrawAmount);
 
         //burn hplSpent and hpwSpent
-        // IBurn(address(hpl)).burn(_hplSpent);
-        // IBurn(address(hpw)).burn(_hpwSpent);
+        {
+            require(
+                _hplSpent >=
+                    userInfoTokenSpend[msg.sender].totalRecordedHPLSpent,
+                "!userInfoTokenSpend hpl"
+            );
+            require(
+                _hpwSpent >=
+                    userInfoTokenSpend[msg.sender].totalRecordedHPWSpent,
+                "!userInfoTokenSpend hpw"
+            );
+
+            IBurn(address(hpl)).burn(
+                _hplSpent - userInfoTokenSpend[msg.sender].totalRecordedHPLSpent
+            );
+            userInfoTokenSpend[msg.sender].totalRecordedHPLSpent = _hplSpent;
+            IBurn(address(hpw)).burn(
+                _hpwSpent - userInfoTokenSpend[msg.sender].totalRecordedHPWSpent
+            );
+            userInfoTokenSpend[msg.sender].totalRecordedHPWSpent = _hpwSpent;
+        }
 
         emit TokenWithdraw(msg.sender, _hplWithdrawAmount, _hpwWithdrawAmount);
 
@@ -230,7 +318,18 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         bytes32 r,
         bytes32 s,
         uint8 v
-    ) external {
+    ) public {
+        _claimRewardsInternal(_hplRewards, _hpwRewards, _expiredTime, r, s, v);
+    }
+
+    function _claimRewardsInternal(
+        uint256 _hplRewards,
+        uint256 _hpwRewards,
+        uint256 _expiredTime,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    ) internal returns (uint256, uint256) {
         require(block.timestamp < _expiredTime, "claimRewards: !expired");
         bytes32 msgHash = keccak256(
             abi.encode(msg.sender, _hplRewards, _hpwRewards, _expiredTime)
@@ -240,8 +339,10 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
             "invalid operator"
         );
         UserInfo storage _user = userInfo[msg.sender];
-        uint256 _lastRewardClaimedAt = _user.lastRewardClaimedAt > 0
-            ? _user.lastRewardClaimedAt
+        //uint256 lastUpdatedAt = _user.lastUpdatedAt;
+        uint256 _lastRewardClaimedAt = _user.lastRewardClaimedAt;
+        _lastRewardClaimedAt = _lastRewardClaimedAt > 0
+            ? _lastRewardClaimedAt
             : contractStartAt;
         require(
             _lastRewardClaimedAt + minTimeBetweenClaims < block.timestamp,
@@ -252,14 +353,11 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
 
         uint256 toTransferHpl = _hplRewards - _user.hplRewardClaimed;
         uint256 toTransferHpw = _hpwRewards - _user.hpwRewardClaimed;
-        address _land = 0x9c271b95A2Aa7Ab600b9B2E178CbBec2A6dc1bAb;
-        uint256 depositedLandCount = getLandDepositedCount(msg.sender, _land);
-        uint256 maxWithdrawal = 3000e18 * depositedLandCount;
+
+        uint256 maxWithdrawal = getMaxWithdrawal(msg.sender, false, false);
+
         if (toTransferHpw > maxWithdrawal) {
             toTransferHpw = maxWithdrawal;
-            if (toTransferHpw > 10000e18) {
-                toTransferHpw = 10000e18;
-            }
             _hpwRewards = _user.hpwRewardClaimed + toTransferHpw;
         }
         _user.hplRewardClaimed = _hplRewards;
@@ -271,6 +369,273 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
         IMint(address(hpw)).mint(msg.sender, toTransferHpw);
 
         emit RewardsClaimed(msg.sender, toTransferHpl, toTransferHpw);
+        return (toTransferHpl, toTransferHpw);
+    }
+
+    function claimRewardsAndDeposit(
+        uint256 _hplRewards,
+        uint256 _hpwRewards,
+        uint256 _expiredTime,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    ) external {
+        (
+            uint256 _claimedHPLAmount,
+            uint256 _claimedHPWAmount
+        ) = _claimRewardsInternal(
+                _hplRewards,
+                _hpwRewards,
+                _expiredTime,
+                r,
+                s,
+                v
+            );
+        //deposit again
+        depositTokensToPlay(_claimedHPLAmount, _claimedHPWAmount);
+    }
+
+    function masterDistributeRewards(
+        uint256[2] memory _rewards, // total [hpl, hpw]
+        uint256 _expiredTime,
+        address[] memory _scholarAddresses,
+        uint256[] memory _commissions,
+        uint256[] memory _scholarHPLSpents, //total spent by this scholar
+        uint256[] memory _scholarHPWSpents, //total spent by this scholar
+        uint256[] memory _scholarHPLAmounts, //total rewards
+        uint256[] memory _scholarHPWAmounts, //total rewards
+        bytes32[2] memory rs,
+        uint8 v
+    ) external {
+        require(
+            block.timestamp < _expiredTime,
+            "masterDistributeRewards: !expired"
+        );
+        require(
+            _scholarAddresses.length == _commissions.length &&
+                _commissions.length == _scholarHPLSpents.length &&
+                _scholarHPLSpents.length == _scholarHPWSpents.length &&
+                _scholarHPWSpents.length == _scholarHPLAmounts.length &&
+                _scholarHPLAmounts.length == _scholarHPWAmounts.length,
+            "!invalid input array length"
+        );
+        bytes32 msgHash = keccak256(
+            abi.encode(
+                msg.sender,
+                _rewards[0],
+                _rewards[1],
+                _scholarAddresses,
+                _scholarHPLAmounts,
+                _scholarHPWAmounts,
+                _expiredTime
+            )
+        );
+        require(
+            operator == recoverSigner(rs[0], rs[1], v, msgHash),
+            "invalid operator"
+        );
+
+        _masterDistributeRewardsInternal(
+            _rewards,
+            _scholarAddresses,
+            _commissions,
+            _scholarHPLSpents,
+            _scholarHPWSpents,
+            _scholarHPLAmounts,
+            _scholarHPWAmounts
+        );
+    }
+
+    function _masterDistributeRewardsInternal(
+        uint256[2] memory _rewards, //total
+        address[] memory _scholarAddresses,
+        uint256[] memory _commissions,
+        uint256[] memory _scholarHPLSpents, //total spent by this scholar
+        uint256[] memory _scholarHPWSpents, //total spent by this scholar
+        uint256[] memory _scholarHPLAmounts,
+        uint256[] memory _scholarHPWAmounts
+    ) internal {
+        require(
+            _scholarAddresses.length == _scholarHPLAmounts.length &&
+                _scholarHPLAmounts.length == _scholarHPWAmounts.length,
+            "!invalid input array lengths"
+        );
+        //compute total rewards to distribute
+        UserInfo storage _user = userInfo[msg.sender];
+        //uint256 lastUpdatedAt = _user.lastUpdatedAt;
+        uint256 _lastRewardClaimedAt = _user.lastRewardClaimedAt;
+        _lastRewardClaimedAt = _lastRewardClaimedAt > 0
+            ? _lastRewardClaimedAt
+            : contractStartAt;
+        require(
+            _lastRewardClaimedAt + minTimeBetweenClaims < block.timestamp,
+            "!minTimeBetweenClaims"
+        );
+        require(_user.hplRewardClaimed <= _rewards[0], "invalid _hplRewards");
+        require(_user.hpwRewardClaimed <= _rewards[1], "invalid _hpwRewards");
+        uint256[2] memory maxWithdrawableNow;
+        uint256 toTransferHpl = _rewards[0] - _user.hplRewardClaimed;
+        uint256 toTransferHpw = _rewards[1] - _user.hpwRewardClaimed;
+        maxWithdrawableNow[0] = toTransferHpl;
+        maxWithdrawableNow[1] = toTransferHpw;
+
+        uint256 maxWithdrawal = getMaxWithdrawal(msg.sender, false, true);
+
+        if (toTransferHpw > maxWithdrawal) {
+            toTransferHpw = maxWithdrawal;
+            _rewards[0] = _user.hpwRewardClaimed + toTransferHpw;
+        }
+
+        if (toTransferHpl > maxWithdrawal) {
+            toTransferHpl = maxWithdrawal;
+            _rewards[1] = _user.hplRewardClaimed + toTransferHpl;
+        }
+        _user.hplRewardClaimed = _rewards[0];
+        _user.hpwRewardClaimed = _rewards[1];
+        _user.lastRewardClaimedAt = block.timestamp;
+
+        //distribute hpl
+        if (toTransferHpl > 0) {
+            _distributeHPLToScholars(
+                toTransferHpl,
+                maxWithdrawableNow[0],
+                msg.sender,
+                _scholarAddresses,
+                _commissions,
+                _scholarHPLSpents,
+                _scholarHPLAmounts
+            );
+        }
+
+        //distribute hpw
+        if (toTransferHpw > 0) {
+            _distributeHPWToScholars(
+                toTransferHpw,
+                maxWithdrawableNow[1],
+                msg.sender,
+                _scholarAddresses,
+                _commissions,
+                _scholarHPWSpents,
+                _scholarHPWAmounts
+            );
+        }
+        emit MasterRewardsClaimed(msg.sender, toTransferHpl, toTransferHpw);
+    }
+
+    function _distributeHPLToScholars(
+        uint256 _toTransferHpl, //total
+        uint256 _maxWithdraw,
+        address _masterAddress,
+        address[] memory _scholarAddresses,
+        uint256[] memory _commissions,
+        uint256[] memory _scholarHPLSpents, //total spent by this scholar
+        uint256[] memory _scholarHPLAmounts
+    ) internal {
+        uint256 _totalTransferredHPL = 0;
+        for (uint256 i = 0; i < _scholarAddresses.length; i++) {
+            require(
+                scholarRewards[_scholarAddresses[i]].masterWallet ==
+                    address(0) ||
+                    scholarRewards[_scholarAddresses[i]].masterWallet ==
+                    _masterAddress,
+                "same scholar, different master"
+            );
+            scholarRewards[_scholarAddresses[i]].masterWallet = _masterAddress;
+
+            if (_scholarHPLAmounts[i] > _scholarHPLSpents[i]) {
+                //compute schlar claimable based on commissions
+                uint256 _scholarClaimableBasedOnCommissions = ((_scholarHPLAmounts[
+                        i
+                    ] - _scholarHPLSpents[i]) * _commissions[i]) / 100;
+                if (
+                    scholarRewards[_scholarAddresses[i]].totalHPLReceived <
+                    _scholarClaimableBasedOnCommissions
+                ) {
+                    uint256 _scholarClaimable = _scholarClaimableBasedOnCommissions -
+                            scholarRewards[_scholarAddresses[i]]
+                                .totalHPLReceived;
+
+                    _scholarClaimable =
+                        (_scholarClaimable * _toTransferHpl) /
+                        _maxWithdraw;
+                    scholarRewards[_scholarAddresses[i]]
+                        .totalHPLReceived += _scholarClaimable;
+                    scholarRewards[_scholarAddresses[i]]
+                        .totalHPLClaimedForThisScholar += _scholarClaimable * 100 / _commissions[i];
+                    _totalTransferredHPL += _scholarClaimable;
+                    hpl.safeTransfer(_scholarAddresses[i], _scholarClaimable);
+                }
+            } else {
+                scholarRewards[_scholarAddresses[i]]
+                        .totalHPLClaimedForThisScholar = _scholarHPLAmounts[i];
+            }
+        }
+        require(
+            _totalTransferredHPL <= _toTransferHpl,
+            "exceed total allowed hpl rewards transfer"
+        );
+        hpl.safeTransfer(_masterAddress, _toTransferHpl - _totalTransferredHPL);
+    }
+
+    function _distributeHPWToScholars(
+        uint256 _toTransferHpw, //total
+        uint256 _maxWithdraw,
+        address _masterAddress,
+        address[] memory _scholarAddresses,
+        uint256[] memory _commissions,
+        uint256[] memory _scholarHPWSpents, //total spent by this scholar
+        uint256[] memory _scholarHPWAmounts
+    ) internal {
+        uint256 _totalTransferredHPW = 0;
+        for (uint256 i = 0; i < _scholarAddresses.length; i++) {
+            require(
+                scholarRewards[_scholarAddresses[i]].masterWallet ==
+                    address(0) ||
+                    scholarRewards[_scholarAddresses[i]].masterWallet ==
+                    _masterAddress,
+                "same scholar, different master"
+            );
+            scholarRewards[_scholarAddresses[i]].masterWallet = _masterAddress;
+
+            if (_scholarHPWAmounts[i] > _scholarHPWSpents[i]) {
+                //compute schlar claimable based on commissions
+                uint256 _scholarClaimableBasedOnCommissions = ((_scholarHPWAmounts[
+                        i
+                    ] - _scholarHPWSpents[i]) * _commissions[i]) / 100;
+                if (
+                    scholarRewards[_scholarAddresses[i]].totalHPWReceived <
+                    _scholarClaimableBasedOnCommissions
+                ) {
+                    uint256 _scholarClaimable = _scholarClaimableBasedOnCommissions -
+                            scholarRewards[_scholarAddresses[i]]
+                                .totalHPWReceived;
+
+                    _scholarClaimable =
+                        (_scholarClaimable * _toTransferHpw) /
+                        _maxWithdraw;
+                    scholarRewards[_scholarAddresses[i]]
+                        .totalHPWReceived += _scholarClaimable;
+                    scholarRewards[_scholarAddresses[i]]
+                        .totalHPWClaimedForThisScholar += _scholarClaimable * 100 / _commissions[i];
+                    _totalTransferredHPW += _scholarClaimable;
+                    IMint(address(hpw)).mint(
+                        _scholarAddresses[i],
+                        _scholarClaimable
+                    );
+                }
+            } else {
+                scholarRewards[_scholarAddresses[i]]
+                        .totalHPWClaimedForThisScholar = _scholarHPWAmounts[i];
+            }
+        }
+        require(
+            _totalTransferredHPW <= _toTransferHpw,
+            "exceed total allowed hpl rewards transfer"
+        );
+        IMint(address(hpw)).mint(
+            _masterAddress,
+            _toTransferHpw - _totalTransferredHPW
+        );
     }
 
     function getUserInfo(address _user)
@@ -334,7 +699,7 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     }
 
     function onERC721Received(
-        address operator,
+        address _operator,
         address from,
         uint256 tokenId,
         bytes calldata data
@@ -346,8 +711,117 @@ contract LetsFarm is Upgradeable, SignerRecover, IERC721ReceiverUpgradeable {
     function getLandDepositedCount(address _addr, address _nft)
         public
         view
+        returns (uint256 total, uint256 wildLandCount)
+    {
+        return (
+            nftUserInfo[_nft][_addr].depositedTokenIds.length,
+            wildLandsCount[_addr]
+        );
+    }
+
+    function getChainId() public view returns (uint256) {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        return chainId;
+    }
+
+    function getScholarRewardsClaimed(address[] memory _scholars)
+        external
+        view
+        returns (uint256[] memory _hplClaimeds, uint256[] memory _hpwClaimeds)
+    {
+        _hplClaimeds = new uint256[](_scholars.length);
+        _hpwClaimeds = new uint256[](_scholars.length);
+
+        for (uint256 i = 0; i < _scholars.length; i++) {
+            _hplClaimeds[i] = scholarRewards[_scholars[i]].totalHPLReceived;
+            _hpwClaimeds[i] = scholarRewards[_scholars[i]].totalHPWReceived;
+        }
+    }
+
+    function getLandContract() public view returns (address) {
+        address _land = 0x9c271b95A2Aa7Ab600b9B2E178CbBec2A6dc1bAb;
+        {
+            uint256 _chainId = getChainId();
+            if (_chainId == 97) {
+                _land = 0x03524a0561f20Cd4cE73EAE1057cFa29B29C40D1;
+            } else if (_chainId == 56) {
+                //do nothing
+            } else {
+                revert("unsupported chain");
+            }
+        }
+        return _land;
+    }
+
+    function getMaxWithdrawal(
+        address _user,
+        bool _tightCheck,
+        bool _forGuild
+    ) public view returns (uint256) {
+        (
+            uint256 depositedLandCount,
+            uint256 wildLandCount
+        ) = getLandDepositedCount(_user, getLandContract());
+        // if (_tightCheck) {
+        //     depositedLandCount = getLandCountForRewardsClaim(_user);
+        // }
+        uint256 normalLand = depositedLandCount.sub(wildLandCount);
+        uint256 _maxPerLand = maxWithdrawPerLand != 0
+            ? maxWithdrawPerLand
+            : (3000 ether);
+        uint256 _maxPerWildLand = maxWithdrawPerWildLand != 0
+            ? maxWithdrawPerWildLand
+            : (800 ether);
+        uint256 maxWithdrawal = (normalLand *
+            _maxPerLand +
+            wildLandCount *
+            _maxPerWildLand);
+        if (!_forGuild) {
+            if (maxWithdrawal > 10000 ether) {
+                maxWithdrawal = 10000 ether;
+            }
+        }
+
+        //check hpw holding
+        // uint256 balance = hpw.balanceOf(_user);
+        // if (maxWithdrawal > balance) {
+        //     maxWithdrawal = balance;
+        // }
+
+        return maxWithdrawal;
+    }
+
+    function getLandCountForRewardsClaim(address _user)
+        public
+        view
         returns (uint256)
     {
-        return nftUserInfo[_nft][_addr].depositedTokenIds.length;
+        address _land = getLandContract();
+        uint256[] storage _depositedTokenIds = nftUserInfo[_land][_user]
+            .depositedTokenIds;
+        uint256 ret = 0;
+        for (uint256 i = 0; i < _depositedTokenIds.length; i++) {
+            if (
+                nftDepositedTime[_land][_depositedTokenIds[i]] +
+                    minTimeBetweenClaims <
+                block.timestamp
+            ) {
+                ret++;
+            }
+        }
+
+        return ret;
+    }
+
+    function isWildLand(uint256 _tokenId) public view returns (bool) {
+        if (address(landExpand) != address(0)) {
+            if (landExpand.wildLandTokens(_tokenId)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

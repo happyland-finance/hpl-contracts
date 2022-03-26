@@ -36,6 +36,11 @@ contract Market is Upgradeable {
 
     SaleInfo[] public saleList;
 
+    mapping(address => uint256) public totalVolume;
+    //address => saleId
+    mapping(address => uint256) public highestTrade;
+    uint256 public latestTradeSaleId;
+
     event NFTSupported(address nft, bool val);
 
     event NewTokenSale(
@@ -278,22 +283,31 @@ contract Market is Upgradeable {
         sale.isActive = false;
 
         uint256 price = sale.price;
+        totalVolume[sale.paymentToken] += price;
+        //update trade info
+        {
+            latestTradeSaleId = sale.saleId + 1;
+            SaleInfo memory _highestTrade = getHighestTradeInfo(sale.paymentToken);
+            if (price >= _highestTrade.price) {
+                highestTrade[sale.paymentToken] = sale.saleId + 1;
+            }
+        }
         //transfer fee
         if (isNative(sale.paymentToken)) {
-            require(msg.value >= price, "insufficiant payment value");
+            require(msg.value >= price.mul(1000 + feePercentX10).div(1000), "insufficiant payment value");
             sale.owner.sendValue(price.mul(1000 - feePercentX10).div(1000));
             feeReceiver.sendValue(address(this).balance);
         } else {
-            IERC20Upgradeable(sale.paymentToken).safeTransferFrom(
-                msg.sender,
-                feeReceiver,
-                price.mul(feePercentX10).div(1000)
-            );
             //transfer to seller
             IERC20Upgradeable(sale.paymentToken).safeTransferFrom(
                 msg.sender,
                 sale.owner,
                 price.mul(1000 - feePercentX10).div(1000)
+            );
+            IERC20Upgradeable(sale.paymentToken).safeTransferFrom(
+                msg.sender,
+                feeReceiver,
+                price.mul(feePercentX10 * 2).div(1000)
             );
         }
 
@@ -330,5 +344,19 @@ contract Market is Upgradeable {
         returns (SaleInfo memory sale)
     {
         return saleList[_saleId];
+    }
+
+    function getHighestTradeInfo(address _paymentToken) public view returns (SaleInfo memory ret) {
+        if (highestTrade[_paymentToken] == 0) {
+            return ret;
+        }
+        return saleList[highestTrade[_paymentToken] - 1];
+    }
+
+    function getLatestTradeInfo() public view returns (SaleInfo memory ret) {
+        if (latestTradeSaleId == 0) {
+            return ret;
+        }
+        return saleList[latestTradeSaleId - 1];
     }
 }

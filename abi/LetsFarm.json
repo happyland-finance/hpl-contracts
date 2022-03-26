@@ -37,6 +37,31 @@
       {
         "indexed": false,
         "internalType": "address",
+        "name": "claimer",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "hplAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "hpwAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "MasterRewardsClaimed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
         "name": "nft",
         "type": "address"
       },
@@ -227,6 +252,44 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_hplRewards",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_hpwRewards",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_expiredTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "r",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "s",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint8",
+        "name": "v",
+        "type": "uint8"
+      }
+    ],
+    "name": "claimRewardsAndDeposit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "contractStartAt",
     "outputs": [
@@ -273,6 +336,19 @@
     "name": "depositTokensToPlay",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getChainId",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -324,6 +400,38 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getLandContract",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      }
+    ],
+    "name": "getLandCountForRewardsClaim",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -340,8 +448,66 @@
     "outputs": [
       {
         "internalType": "uint256",
+        "name": "total",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "wildLandCount",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "_tightCheck",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "_forGuild",
+        "type": "bool"
+      }
+    ],
+    "name": "getMaxWithdrawal",
+    "outputs": [
+      {
+        "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address[]",
+        "name": "_scholars",
+        "type": "address[]"
+      }
+    ],
+    "name": "getScholarRewardsClaimed",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "_hplClaimeds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_hpwClaimeds",
+        "type": "uint256[]"
       }
     ],
     "stateMutability": "view",
@@ -480,6 +646,122 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "isWildLand",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "landExpand",
+    "outputs": [
+      {
+        "internalType": "contract ILandExpand",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[2]",
+        "name": "_rewards",
+        "type": "uint256[2]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_expiredTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address[]",
+        "name": "_scholarAddresses",
+        "type": "address[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_commissions",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_scholarHPLSpents",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_scholarHPWSpents",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_scholarHPLAmounts",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_scholarHPWAmounts",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bytes32[2]",
+        "name": "rs",
+        "type": "bytes32[2]"
+      },
+      {
+        "internalType": "uint8",
+        "name": "v",
+        "type": "uint8"
+      }
+    ],
+    "name": "masterDistributeRewards",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxWithdrawPerLand",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxWithdrawPerWildLand",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "minTimeBetweenClaims",
     "outputs": [
@@ -496,7 +778,31 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "operator",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "nftDepositedTime",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_operator",
         "type": "address"
       },
       {
@@ -560,6 +866,45 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "scholarRewards",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "masterWallet",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalHPLReceived",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalHPWReceived",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalHPLClaimedForThisScholar",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalHPWClaimedForThisScholar",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "setContractStart",
     "outputs": [],
@@ -575,6 +920,37 @@
       }
     ],
     "name": "setContractStartWithTime",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_landExpand",
+        "type": "address"
+      }
+    ],
+    "name": "setLandExpand",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_normalLand",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_wildLand",
+        "type": "uint256"
+      }
+    ],
+    "name": "setMaxWithdrawlPerLand",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -603,6 +979,19 @@
     "name": "setOperator",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalWildLands",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -701,6 +1090,30 @@
         "type": "address"
       }
     ],
+    "name": "userInfoTokenSpend",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "totalRecordedHPLSpent",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalRecordedHPWSpent",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "name": "userInfoTokenWithdraw",
     "outputs": [
       {
@@ -711,6 +1124,25 @@
       {
         "internalType": "uint256",
         "name": "hpwWithdraw",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "wildLandsCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
         "type": "uint256"
       }
     ],
